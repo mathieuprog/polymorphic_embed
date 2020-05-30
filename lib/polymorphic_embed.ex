@@ -41,6 +41,7 @@ defmodule PolymorphicEmbed do
         |> case do
              %{valid?: true} = changeset ->
                {:ok, Ecto.Changeset.apply_changes(changeset)}
+
              changeset ->
                {:error, changeset.errors}
            end
@@ -124,6 +125,12 @@ defmodule PolymorphicEmbed do
       defp dump_value(_, _, value), do: value
 
       def __is_polymorphic_type__(), do: true
+
+      def get_module_from_type(type) do
+        @__meta_data
+        |> Enum.find(&to_string(type) == &1.type)
+        |> Map.fetch!(:module)
+      end
 
       defp get_module_from_data(%{"__type__" => type}) do
         @__meta_data

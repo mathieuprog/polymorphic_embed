@@ -14,5 +14,6 @@ defmodule PolymorphicEmbed.Reminder do
   def changeset(struct, values) do
     struct
     |> cast(values, [:date, :text, :channel])
+    |> validate_required(:date)
   end
 end

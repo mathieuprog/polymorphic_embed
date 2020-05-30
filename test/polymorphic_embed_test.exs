@@ -2,6 +2,10 @@ defmodule PolymorphicEmbedTest do
   use ExUnit.Case
   doctest PolymorphicEmbed
 
+  import Phoenix.HTML
+  import Phoenix.HTML.Form
+  import PolymorphicEmbed.HTML.Form
+
   alias PolymorphicEmbed.Repo
   alias PolymorphicEmbed.Reminder
   alias PolymorphicEmbed.Channel.{SMS, Email}
@@ -118,5 +122,53 @@ defmodule PolymorphicEmbedTest do
       |> Repo.one()
 
     assert SMS = reminder.channel.__struct__
+  end
+
+  test "inputs_for/4" do
+    attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an Email reminder",
+      channel: %{
+        address: "a",
+        valid: true,
+        confirmed: true
+      }
+    }
+
+    changeset =
+      %Reminder{}
+      |> Reminder.changeset(attrs)
+
+    contents =
+      safe_inputs_for(changeset, :channel, :email, fn f ->
+        assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+        assert f.errors == []
+        text_input(f, :address)
+      end)
+
+    assert contents == ~s(<input id="reminder_channel_address" name="reminder[channel][address]" type="text">)
+
+    contents =
+      safe_inputs_for(Map.put(changeset, :action, :insert), :channel, :email, fn f ->
+        assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+        refute f.errors == []
+        text_input(f, :address)
+      end)
+
+    assert contents == ~s(<input id="reminder_channel_address" name="reminder[channel][address]" type="text">)
+  end
+
+  defp safe_inputs_for(changeset, field, type, fun) do
+    mark = "--PLACEHOLDER--"
+
+    contents =
+      safe_to_string(
+        form_for(changeset, "/", fn f ->
+          html_escape([mark, polymorphic_embed_inputs_for(f, field, type, fun), mark])
+        end)
+      )
+
+    [_, inner, _] = String.split(contents, mark)
+    inner
   end
 end
