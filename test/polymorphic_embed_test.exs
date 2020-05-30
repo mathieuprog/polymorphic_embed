@@ -146,7 +146,7 @@ defmodule PolymorphicEmbedTest do
         text_input(f, :address)
       end)
 
-    assert contents == ~s(<input id="reminder_channel_address" name="reminder[channel][address]" type="text">)
+    assert contents == ~s(<input id="reminder_channel___type__" name="reminder[channel][__type__]" type="hidden" value="email"><input id="reminder_channel_address" name="reminder[channel][address]" type="text">)
 
     contents =
       safe_inputs_for(Map.put(changeset, :action, :insert), :channel, :email, fn f ->
@@ -155,7 +155,7 @@ defmodule PolymorphicEmbedTest do
         text_input(f, :address)
       end)
 
-    assert contents == ~s(<input id="reminder_channel_address" name="reminder[channel][address]" type="text">)
+    assert contents == ~s(<input id="reminder_channel___type__" name="reminder[channel][__type__]" type="hidden" value="email"><input id="reminder_channel_address" name="reminder[channel][address]" type="text">)
   end
 
   defp safe_inputs_for(changeset, field, type, fun) do
