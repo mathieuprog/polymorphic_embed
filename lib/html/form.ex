@@ -1,13 +1,14 @@
 if Code.ensure_loaded?(Phoenix.HTML) do
   defmodule PolymorphicEmbed.HTML.Form do
-    import Phoenix.HTML
+    import Phoenix.HTML, only: [html_escape: 1]
+    import Phoenix.HTML.Form, only: [hidden_inputs_for: 1]
 
     def polymorphic_embed_inputs_for(form, field, type, fun) when is_atom(field) or is_binary(field) do
       forms = to_form(form.source, form, field, type)
 
       html_escape(
         Enum.map(forms, fn form ->
-          fun.(form)
+          [hidden_inputs_for(form), fun.(form)]
         end)
       )
     end
@@ -40,7 +41,7 @@ if Code.ensure_loaded?(Phoenix.HTML) do
           errors: errors,
           data: data,
           params: params,
-          hidden: [],
+          hidden: [__type__: to_string(type)],
           options: []
         }
       ]
