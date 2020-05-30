@@ -1,10 +1,4 @@
 defmodule PolymorphicEmbed do
-
-  #  use PolymorphicEmbed, types: [
-  #    human: Human,
-  #    tool: {module: Tool, identify_by_fields: [:name, :color]}
-  #  ]
-
   defmacro __using__(opts) do
     meta_data =
       Keyword.fetch!(opts, :types)
