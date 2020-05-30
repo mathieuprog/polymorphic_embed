@@ -3,7 +3,8 @@ if Code.ensure_loaded?(Phoenix.HTML) do
     import Phoenix.HTML, only: [html_escape: 1]
     import Phoenix.HTML.Form, only: [hidden_inputs_for: 1]
 
-    def polymorphic_embed_inputs_for(form, field, type, fun) when is_atom(field) or is_binary(field) do
+    def polymorphic_embed_inputs_for(form, field, type, fun)
+        when is_atom(field) or is_binary(field) do
       forms = to_form(form.source, form, field, type)
 
       html_escape(
@@ -25,11 +26,12 @@ if Code.ensure_loaded?(Phoenix.HTML) do
         Ecto.Changeset.change(data)
         |> apply_action(parent_action)
 
-      changeset = %Ecto.Changeset{changeset |
-        action: parent_action,
-        params: params,
-        errors: errors,
-        valid?: errors != []
+      changeset = %Ecto.Changeset{
+        changeset
+        | action: parent_action,
+          params: params,
+          errors: errors,
+          valid?: errors != []
       }
 
       [
@@ -55,11 +57,14 @@ if Code.ensure_loaded?(Phoenix.HTML) do
     defp get_errors(%{action: nil}, _field), do: []
     defp get_errors(%{action: :ignore}, _field), do: []
     defp get_errors(%{errors: []}, _field), do: []
+
     defp get_errors(%{errors: errors}, field) do
       Keyword.get(errors, field)
       |> do_get_errors()
     end
+
     defp do_get_errors(nil), do: []
+
     defp do_get_errors({_, errors}) do
       errors
       |> Keyword.delete(:type)

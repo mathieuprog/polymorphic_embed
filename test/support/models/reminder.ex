@@ -4,9 +4,9 @@ defmodule PolymorphicEmbed.Reminder do
   import Ecto.Changeset
 
   schema "reminders" do
-    field :date, :utc_datetime
-    field :text, :string
-    field :channel, PolymorphicEmbed.ChannelData
+    field(:date, :utc_datetime)
+    field(:text, :string)
+    field(:channel, PolymorphicEmbed.ChannelData)
 
     timestamps()
   end

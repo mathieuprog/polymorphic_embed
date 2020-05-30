@@ -4,6 +4,6 @@ defmodule PolymorphicEmbed.Channel.SMSResult do
   @primary_key false
 
   embedded_schema do
-    field :success, :boolean
+    field(:success, :boolean)
   end
 end

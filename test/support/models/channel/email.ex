@@ -5,9 +5,9 @@ defmodule PolymorphicEmbed.Channel.Email do
   @primary_key false
 
   embedded_schema do
-    field :address, :string
-    field :confirmed, :boolean
-    field :valid, :boolean
+    field(:address, :string)
+    field(:confirmed, :boolean)
+    field(:valid, :boolean)
   end
 
   def changeset(email, params) do

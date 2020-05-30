@@ -6,11 +6,13 @@ defmodule PolymorphicEmbed do
         {type_name, type_opts} when is_list(type_opts) ->
           module = Keyword.fetch!(type_opts, :module)
           identify_by_fields = Keyword.fetch!(type_opts, :identify_by_fields)
+
           %{
             type: type_name |> to_string(),
             module: module |> Macro.expand(__CALLER__),
             identify_by_fields: identify_by_fields |> Enum.map(&to_string/1)
           }
+
         {type_name, module} ->
           %{
             type: type_name |> to_string(),
@@ -28,17 +30,17 @@ defmodule PolymorphicEmbed do
 
       def cast(attrs) do
         # convert keys into string (in case they would be atoms)
-        (for {key, val} <- attrs, into: %{}, do: {to_string(key), val})
+        for({key, val} <- attrs, into: %{}, do: {to_string(key), val})
         # get the right module based on the __type__ key or infer from the keys
         |> get_module_from_data()
         |> cast_to_changeset(attrs)
         |> case do
-             %{valid?: true} = changeset ->
-               {:ok, Ecto.Changeset.apply_changes(changeset)}
+          %{valid?: true} = changeset ->
+            {:ok, Ecto.Changeset.apply_changes(changeset)}
 
-             changeset ->
-               {:error, changeset.errors}
-           end
+          changeset ->
+            {:error, changeset.errors}
+        end
       end
 
       defp cast_to_changeset(%module{} = struct, attrs) do
@@ -46,6 +48,7 @@ defmodule PolymorphicEmbed do
           module.changeset(struct, attrs)
         else
           fields_without_embeds = module.__schema__(:fields) -- module.__schema__(:embeds)
+
           Ecto.Changeset.cast(struct, attrs, fields_without_embeds)
           |> cast_embeds_to_changeset(module.__schema__(:embeds))
         end
@@ -105,6 +108,7 @@ defmodule PolymorphicEmbed do
           {:embed, _} ->
             {:ok, term} = Ecto.Type.dump(:map, map_from_struct(struct, :embed))
             term
+
           _ ->
             # handle nested polymorphic embeds
             if Code.ensure_loaded?(type) && function_exported?(type, :__is_polymorphic_type__, 0) do
@@ -122,13 +126,13 @@ defmodule PolymorphicEmbed do
 
       def get_module_from_type(type) do
         @__meta_data
-        |> Enum.find(&to_string(type) == &1.type)
+        |> Enum.find(&(to_string(type) == &1.type))
         |> Map.fetch!(:module)
       end
 
       defp get_module_from_data(%{"__type__" => type}) do
         @__meta_data
-        |> Enum.find(&type == &1.type)
+        |> Enum.find(&(type == &1.type))
         |> Map.fetch!(:module)
       end
 
@@ -137,20 +141,20 @@ defmodule PolymorphicEmbed do
         # Enum.count(contained -- container) == 0
         # contained -- container == []
         @__meta_data
-        |> Enum.filter(&[] != &1.identify_by_fields)
-        |> Enum.find(&[] == &1.identify_by_fields -- Map.keys(attrs))
+        |> Enum.filter(&([] != &1.identify_by_fields))
+        |> Enum.find(&([] == &1.identify_by_fields -- Map.keys(attrs)))
         |> case do
-             nil ->
-               raise "could not infer polymorphic embed from data #{inspect attrs}"
+          nil ->
+            raise "could not infer polymorphic embed from data #{inspect(attrs)}"
 
-             entry ->
-               Map.fetch!(entry, :module)
-           end
+          entry ->
+            Map.fetch!(entry, :module)
+        end
       end
 
       defp get_type_from_module(module) do
         @__meta_data
-        |> Enum.find(&module == &1.module)
+        |> Enum.find(&(module == &1.module))
         |> Map.fetch!(:type)
       end
     end
