@@ -145,7 +145,13 @@ defmodule PolymorphicEmbed do
         @__meta_data
         |> Enum.filter(&[] != &1.identify_by_fields)
         |> Enum.find(&[] == &1.identify_by_fields -- Map.keys(attrs))
-        |> Map.fetch!(:module)
+        |> case do
+             nil ->
+               raise "could not infer polymorphic embed from data #{inspect attrs}"
+
+             entry ->
+               Map.fetch!(entry, :module)
+           end
       end
 
       defp get_type_from_module(module) do
