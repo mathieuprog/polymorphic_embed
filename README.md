@@ -109,7 +109,7 @@ Here we specify how the type can be determined based on the presence of given fi
 and `:confirmed` parameters (or their string version), the type is `:email`. A `"__type__"` parameter is then no longer
 required.
 
-### Displaying form inputs and errors
+### Displaying form inputs and errors in Phoenix templates
 
 The library comes with a form helper in order to build form inputs for polymorphic embeds and display changeset errors.
 
@@ -143,6 +143,15 @@ Here is an example form using the imported function:
 ```
 
 `polymorphic_embed_inputs_for/4` also renders a hidden input for the `"__type__"` field.
+
+## Features
+
+* Detect which types to use for the data being `cast`-ed, based on fields present in the data (no need for a *type* field in the data)
+* Run changeset validations when a `changeset/2` function is present (when absent, the library will introspect the fields to cast)
+* Support for nested polymorphic embeds
+* Support for nested `embeds_one`/`embeds_many` embeds
+* Display form inputs for polymorphic embeds in Phoenix templates
+* Tests to ensure code quality
 
 ## Installation
 
