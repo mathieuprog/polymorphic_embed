@@ -131,9 +131,7 @@ defmodule PolymorphicEmbed do
       end
 
       defp get_module_from_data(%{"__type__" => type}) do
-        @__meta_data
-        |> Enum.find(&(type == &1.type))
-        |> Map.fetch!(:module)
+        get_module_from_type(type)
       end
 
       defp get_module_from_data(attrs) do
