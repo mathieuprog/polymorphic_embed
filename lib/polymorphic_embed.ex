@@ -122,8 +122,12 @@ defmodule PolymorphicEmbed do
 
       defp dump_value(_, _, value), do: value
 
+      # used to detect a nested polymorphic embed
       def __is_polymorphic_type__(), do: true
 
+      # Function is public as it is needed for the form helper `polymorphic_embed_inputs_for/4`.
+      # In some cases, the form helper needs to get the module based on a given type in order to build a struct and a
+      # changeset for `Phoenix.HTML.Form`.
       def get_module_from_type(type) do
         @__meta_data
         |> Enum.find(&(to_string(type) == &1.type))
