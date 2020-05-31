@@ -9,9 +9,9 @@ data source).
 
 ## Usage
 
-#### Enable polymorphism
+### Enable polymorphism
 
-Let's say we want a schema `Reminder`, that can be sent either by email or by SMS.
+Let's say we want a schema `Reminder` representing a reminder for an event, that can be sent either by email or SMS.
 
 We create the `Email` and `SMS` embedded schemas containing the fields that are specific for each of those communication
 channels.
@@ -109,7 +109,7 @@ Here we specify how the type can be determined based on the presence of given fi
 and `:confirmed` parameters (or their string version), the type is `:email`. A `"__type__"` parameter is then no longer
 required.
 
-#### Displaying form inputs and errors
+### Displaying form inputs and errors
 
 The library comes with a form helper in order to build form inputs for polymorphic embeds and display changeset errors.
 
