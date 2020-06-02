@@ -88,7 +88,7 @@ module is the Ecto Type (through `use`-ing `PolymorphicEmbed`).
 The `:types` option for `PolymorphicEmbed` contains a keyword list mapping an atom representing the type (in this
 example `:email` and `:sms`) with the corresponding embedded schema module.
 
-Two styles of such mapping have been shown in the code above:
+There are two strategies to detect the right embedded schema to use:
 
 1.
 ```elixir
@@ -105,9 +105,12 @@ containing the type of channel (`"email"` or `"sms"`).
   identify_by_fields: [:address, :confirmed]]]
 ```
 
-Here we specify how the type can be determined based on the presence of given fields. If the data contains `:address`
-and `:confirmed` parameters (or their string version), the type is `:email`. A `"__type__"` parameter is then no longer
-required.
+Here we specify how the type can be determined based on the presence of given fields. In this example, if the data
+contains `:address` and `:confirmed` parameters (or their string version), the type is `:email`. A `"__type__"`
+parameter is then no longer required.
+
+Note that you may still include a `__type__` parameter that will take precedence over this strategy (this could still be
+useful if you need to store incomplete data, which might not allow identifying the type).
 
 ### Displaying form inputs and errors in Phoenix templates
 
