@@ -119,7 +119,7 @@ if Code.ensure_loaded?(Phoenix.HTML) do
           _ -> []
         end
 
-      embed_data = Map.get(changeset.data, embed_field) || get_embed_module(changeset, embed_field, embed_params)
+      embed_data = Map.get(changeset.data, embed_field) || get_embed_struct(changeset, embed_field, embed_params)
 
       embed_changeset =
         %Ecto.Changeset{
@@ -141,7 +141,7 @@ if Code.ensure_loaded?(Phoenix.HTML) do
       do_add_changes_for_nested_embeds(changeset, tail_params, errors)
     end
 
-    defp get_embed_module(changeset, field, params) do
+    defp get_embed_struct(changeset, field, params) do
       changeset
       |> Ecto.Changeset.cast(%{field => params}, [])
       |> Ecto.Changeset.cast_embed(field)
