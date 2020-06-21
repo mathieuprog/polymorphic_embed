@@ -39,7 +39,7 @@ defmodule PolymorphicEmbed do
             {:ok, Ecto.Changeset.apply_changes(changeset)}
 
           changeset ->
-            {:error, changeset.errors}
+            {:error, build_errors(changeset)}
         end
       end
 
@@ -122,12 +122,19 @@ defmodule PolymorphicEmbed do
 
       defp dump_value(_, _, value), do: value
 
-      # used to detect a nested polymorphic embed
       def __is_polymorphic_type__(), do: true
 
-      # Function is public as it is needed for the form helper `polymorphic_embed_inputs_for/4`.
-      # In some cases, the form helper needs to get the module based on a given type in order to build a struct and a
-      # changeset for `Phoenix.HTML.Form`.
+      defp build_errors(%{errors: errors, changes: changes} = changeset) do
+        Enum.reduce(changes, errors, fn {field, value}, all_errors ->
+          case value do
+            %Ecto.Changeset{} = changeset ->
+              Keyword.merge([{field, {"is invalid", changeset.errors}}], all_errors)
+            _ ->
+              all_errors
+          end
+        end)
+      end
+
       def get_module_from_type(type) do
         @__meta_data
         |> Enum.find(&(to_string(type) == &1.type))
@@ -135,7 +142,9 @@ defmodule PolymorphicEmbed do
       end
 
       defp get_module_from_data(%{"__type__" => type}) do
-        get_module_from_type(type)
+        @__meta_data
+        |> Enum.find(&(type == &1.type))
+        |> Map.fetch!(:module)
       end
 
       defp get_module_from_data(attrs) do

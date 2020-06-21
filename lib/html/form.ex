@@ -31,8 +31,9 @@ if Code.ensure_loaded?(Phoenix.HTML) do
         | action: parent_action,
           params: params,
           errors: errors,
-          valid?: errors != []
+          valid?: errors == []
       }
+      |> add_changes_for_nested_embeds(params, errors)
 
       [
         %Phoenix.HTML.Form{
@@ -82,6 +83,70 @@ if Code.ensure_loaded?(Phoenix.HTML) do
         data ->
           data
       end
+    end
+
+    defp add_changes_for_nested_embeds(changeset, params, _errors) when params == %{}, do: changeset
+
+    defp add_changes_for_nested_embeds(changeset, %{} = params, errors) do
+      embeds_fields_as_string =
+        changeset.data.__struct__.__schema__(:embeds)
+        |> Enum.map(&Atom.to_string(&1))
+
+      embeds_params =
+        Enum.filter(params, fn {key, _} -> Enum.member?(embeds_fields_as_string, key) end)
+        |> Enum.map(fn {key, value} -> {String.to_existing_atom(key), value} end)
+
+      do_add_changes_for_nested_embeds(changeset, embeds_params, errors)
+    end
+
+    defp do_add_changes_for_nested_embeds(changeset, [], _errors), do: changeset
+
+    defp do_add_changes_for_nested_embeds(changeset, [{embed_field, %{} = embed_params} | tail_params], errors) do
+      embed_errors =
+        Enum.find(errors, fn {error_key, _} -> error_key == embed_field end)
+        |> case do
+             {_, { _, errors}} -> errors
+             _ -> []
+           end
+
+      embed_data =
+        case Map.get(changeset.data, embed_field) do
+          nil ->
+            get_embed_module(changeset, embed_field, embed_params)
+            |> struct()
+            |> Ecto.Changeset.change()
+            |> Ecto.Changeset.apply_changes()
+
+          data ->
+            data
+        end
+
+      embed_changeset =
+        %Ecto.Changeset{
+          data: embed_data,
+          action: changeset.action,
+          params: embed_params,
+          errors: embed_errors,
+          valid?: embed_errors == [],
+          changes: %{}
+        }
+        |> add_changes_for_nested_embeds(embed_params, embed_errors)
+
+      changeset = %{changeset | changes: Map.put(changeset.changes, embed_field, embed_changeset)}
+
+      do_add_changes_for_nested_embeds(changeset, tail_params, embed_errors)
+    end
+
+    defp do_add_changes_for_nested_embeds(changeset, [_ | tail_params], errors) do
+      do_add_changes_for_nested_embeds(changeset, tail_params, errors)
+    end
+
+    defp get_embed_module(changeset, field, params) do
+      Ecto.Changeset.cast(Ecto.Changeset.apply_changes(changeset), %{field => params}, [])
+      |> Ecto.Changeset.cast_embed(field)
+      |> Ecto.Changeset.apply_changes()
+      |> Map.fetch!(field)
+      |> Map.fetch!(:__struct__)
     end
   end
 end
