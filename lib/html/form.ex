@@ -152,7 +152,9 @@ if Code.ensure_loaded?(Phoenix.HTML) do
     end
 
     defp get_embed_module(changeset, field, params) do
-      Ecto.Changeset.cast(Ecto.Changeset.apply_changes(changeset), %{field => params}, [])
+      changeset
+      |> Ecto.Changeset.apply_changes()
+      |> Ecto.Changeset.cast(%{field => params}, [])
       |> Ecto.Changeset.cast_embed(field)
       |> Ecto.Changeset.apply_changes()
       |> Map.fetch!(field)
