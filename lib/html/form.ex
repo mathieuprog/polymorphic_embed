@@ -5,7 +5,11 @@ if Code.ensure_loaded?(Phoenix.HTML) do
 
     def polymorphic_embed_inputs_for(form, field, type, fun)
         when is_atom(field) or is_binary(field) do
-      forms = to_form(form.source, form, field, type)
+      options =
+        form.options
+        |> Keyword.take([:multipart])
+
+      forms = to_form(form.source, form, field, type, options)
 
       html_escape(
         Enum.map(forms, fn form ->
@@ -14,7 +18,7 @@ if Code.ensure_loaded?(Phoenix.HTML) do
       )
     end
 
-    def to_form(%{action: parent_action} = source_changeset, form, field, type) do
+    def to_form(%{action: parent_action} = source_changeset, form, field, type, options) do
       id = to_string(form.id <> "_#{field}")
       name = to_string(form.name <> "[#{field}]")
 
@@ -26,14 +30,15 @@ if Code.ensure_loaded?(Phoenix.HTML) do
         Ecto.Changeset.change(data)
         |> apply_action(parent_action)
 
-      changeset = %Ecto.Changeset{
-        changeset
-        | action: parent_action,
-          params: params,
-          errors: errors,
-          valid?: errors == []
-      }
-      |> add_changes_for_nested_embeds(params, errors)
+      changeset =
+        %Ecto.Changeset{
+          changeset
+          | action: parent_action,
+            params: params,
+            errors: errors,
+            valid?: errors == []
+        }
+        |> add_changes_for_nested_embeds(params, errors)
 
       [
         %Phoenix.HTML.Form{
@@ -45,7 +50,7 @@ if Code.ensure_loaded?(Phoenix.HTML) do
           data: data,
           params: params,
           hidden: [__type__: to_string(type)],
-          options: []
+          options: options
         }
       ]
     end
@@ -85,7 +90,8 @@ if Code.ensure_loaded?(Phoenix.HTML) do
       end
     end
 
-    defp add_changes_for_nested_embeds(changeset, params, _errors) when params == %{}, do: changeset
+    defp add_changes_for_nested_embeds(changeset, params, _errors) when params == %{},
+      do: changeset
 
     defp add_changes_for_nested_embeds(changeset, %{} = params, errors) do
       embeds_fields_as_string =
@@ -101,13 +107,17 @@ if Code.ensure_loaded?(Phoenix.HTML) do
 
     defp do_add_changes_for_nested_embeds(changeset, [], _errors), do: changeset
 
-    defp do_add_changes_for_nested_embeds(changeset, [{embed_field, %{} = embed_params} | tail_params], errors) do
+    defp do_add_changes_for_nested_embeds(
+           changeset,
+           [{embed_field, %{} = embed_params} | tail_params],
+           errors
+         ) do
       embed_errors =
         Enum.find(errors, fn {error_key, _} -> error_key == embed_field end)
         |> case do
-             {_, { _, errors}} -> errors
-             _ -> []
-           end
+          {_, {_, errors}} -> errors
+          _ -> []
+        end
 
       embed_data =
         case Map.get(changeset.data, embed_field) do
