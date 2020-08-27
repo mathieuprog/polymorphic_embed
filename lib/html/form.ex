@@ -1,4 +1,4 @@
-if Code.ensure_loaded?(Phoenix.HTML) do
+if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) do
   defmodule PolymorphicEmbed.HTML.Form do
     import Phoenix.HTML, only: [html_escape: 1]
     import Phoenix.HTML.Form, only: [hidden_inputs_for: 1]
@@ -119,7 +119,9 @@ if Code.ensure_loaded?(Phoenix.HTML) do
           _ -> []
         end
 
-      embed_data = Map.get(changeset.data, embed_field) || get_embed_struct(changeset, embed_field, embed_params)
+      embed_data =
+        Map.get(changeset.data, embed_field) ||
+          get_embed_struct(changeset, embed_field, embed_params)
 
       embed_changeset =
         %Ecto.Changeset{
