@@ -22,7 +22,7 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
       id = to_string(form.id <> "_#{field}")
       name = to_string(form.name <> "[#{field}]")
 
-      params = Map.get(source_changeset.params, to_string(field), %{})
+      params = Map.get(source_changeset.params || %{}, to_string(field), %{})
       errors = get_errors(source_changeset, field)
       data = get_data(source_changeset, field, type)
 
