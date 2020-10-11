@@ -83,7 +83,7 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
       case Map.get(data, field) do
         nil ->
           module = Map.fetch!(changeset.types, field)
-          struct(module.get_module_from_type(type))
+          struct(module.get_polymorphic_module(type))
 
         data ->
           data

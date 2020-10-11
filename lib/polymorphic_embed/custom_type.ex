@@ -26,22 +26,13 @@ defmodule PolymorphicEmbed.CustomType do
     quote do
       defmodule CustomType do
         defmodule Metadata do
-          # Used by form helper `polymorphic_embed_inputs_for/4`.
-          # In some cases, the form helper needs to get the module based on a given type in order to build a struct and a
-          # changeset for `Phoenix.HTML.Form`.
-          def get_module_from_type(type) do
-            unquote(Macro.escape(metadata))
-            |> Enum.find(&(to_string(type) == &1.type))
-            |> Map.fetch!(:module)
-          end
-
-          def get_module_from_data(%{"__type__" => type}) do
+          def get_polymorphic_module(%{"__type__" => type}) do
             unquote(Macro.escape(metadata))
             |> Enum.find(&(type == &1.type))
             |> Map.fetch!(:module)
           end
 
-          def get_module_from_data(attrs) do
+          def get_polymorphic_module(%{} = attrs) do
             # check if one list is contained in another
             # Enum.count(contained -- container) == 0
             # contained -- container == []
@@ -57,7 +48,16 @@ defmodule PolymorphicEmbed.CustomType do
                end
           end
 
-          def get_type_from_module(module) do
+          # Used by form helper `polymorphic_embed_inputs_for/4`.
+          # In some cases, the form helper needs to get the module based on a given type in order to build a struct and a
+          # changeset for `Phoenix.HTML.Form`.
+          def get_polymorphic_module(type) do
+            unquote(Macro.escape(metadata))
+            |> Enum.find(&(to_string(type) == &1.type))
+            |> Map.fetch!(:module)
+          end
+
+          def get_polymorphic_type(module) do
             unquote(Macro.escape(metadata))
             |> Enum.find(&(module == &1.module))
             |> Map.fetch!(:type)
@@ -72,7 +72,7 @@ defmodule PolymorphicEmbed.CustomType do
           # convert keys into string (in case they would be atoms)
           for({key, val} <- attrs, into: %{}, do: {to_string(key), val})
           # get the right module based on the __type__ key or infer from the keys
-          |> Metadata.get_module_from_data()
+          |> Metadata.get_polymorphic_module()
           |> cast_to_changeset(attrs)
           |> case do
                %{valid?: true} = changeset ->
@@ -113,7 +113,7 @@ defmodule PolymorphicEmbed.CustomType do
         def load(data) do
           struct =
             data
-            |> Metadata.get_module_from_data()
+            |> Metadata.get_polymorphic_module()
             |> cast_to_changeset(data)
             |> Ecto.Changeset.apply_changes()
 
@@ -132,7 +132,7 @@ defmodule PolymorphicEmbed.CustomType do
         end
 
         defp maybe_put_type(%{} = map, module, :polymorphic_embed) do
-          Map.put(map, :__type__, Metadata.get_type_from_module(module))
+          Map.put(map, :__type__, Metadata.get_polymorphic_type(module))
         end
 
         defp maybe_put_type(%{} = map, _, _), do: map
