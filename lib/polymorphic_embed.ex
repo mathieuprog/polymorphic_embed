@@ -11,7 +11,8 @@ defmodule PolymorphicEmbed do
       defdelegate cast(attrs), to: CustomType
       defdelegate load(data), to: CustomType
       defdelegate dump(struct), to: CustomType
-      defdelegate get_module_from_type(type), to: CustomType
+      defdelegate get_module_from_type(type), to: CustomType.Metadata
+      defdelegate get_type_from_module(type), to: CustomType.Metadata
     end
   end
 end

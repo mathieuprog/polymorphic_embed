@@ -25,6 +25,45 @@ defmodule PolymorphicEmbed.CustomType do
 
     quote do
       defmodule CustomType do
+        defmodule Metadata do
+          # Used by form helper `polymorphic_embed_inputs_for/4`.
+          # In some cases, the form helper needs to get the module based on a given type in order to build a struct and a
+          # changeset for `Phoenix.HTML.Form`.
+          def get_module_from_type(type) do
+            unquote(Macro.escape(metadata))
+            |> Enum.find(&(to_string(type) == &1.type))
+            |> Map.fetch!(:module)
+          end
+
+          def get_module_from_data(%{"__type__" => type}) do
+            unquote(Macro.escape(metadata))
+            |> Enum.find(&(type == &1.type))
+            |> Map.fetch!(:module)
+          end
+
+          def get_module_from_data(attrs) do
+            # check if one list is contained in another
+            # Enum.count(contained -- container) == 0
+            # contained -- container == []
+            unquote(Macro.escape(metadata))
+            |> Enum.filter(&([] != &1.identify_by_fields))
+            |> Enum.find(&([] == &1.identify_by_fields -- Map.keys(attrs)))
+            |> case do
+                 nil ->
+                   raise "could not infer polymorphic embed from data #{inspect(attrs)}"
+
+                 entry ->
+                   Map.fetch!(entry, :module)
+               end
+          end
+
+          def get_type_from_module(module) do
+            unquote(Macro.escape(metadata))
+            |> Enum.find(&(module == &1.module))
+            |> Map.fetch!(:type)
+          end
+        end
+
         use Ecto.Type
 
         def type(), do: :map
@@ -33,7 +72,7 @@ defmodule PolymorphicEmbed.CustomType do
           # convert keys into string (in case they would be atoms)
           for({key, val} <- attrs, into: %{}, do: {to_string(key), val})
           # get the right module based on the __type__ key or infer from the keys
-          |> get_module_from_data()
+          |> Metadata.get_module_from_data()
           |> cast_to_changeset(attrs)
           |> case do
                %{valid?: true} = changeset ->
@@ -74,7 +113,7 @@ defmodule PolymorphicEmbed.CustomType do
         def load(data) do
           struct =
             data
-            |> get_module_from_data()
+            |> Metadata.get_module_from_data()
             |> cast_to_changeset(data)
             |> Ecto.Changeset.apply_changes()
 
@@ -93,7 +132,7 @@ defmodule PolymorphicEmbed.CustomType do
         end
 
         defp maybe_put_type(%{} = map, module, :polymorphic_embed) do
-          Map.put(map, :__type__, get_type_from_module(module))
+          Map.put(map, :__type__, Metadata.get_type_from_module(module))
         end
 
         defp maybe_put_type(%{} = map, _, _), do: map
@@ -132,43 +171,6 @@ defmodule PolymorphicEmbed.CustomType do
                 all_errors
             end
           end)
-        end
-
-        # Function is public as it is needed for the form helper `polymorphic_embed_inputs_for/4`.
-        # In some cases, the form helper needs to get the module based on a given type in order to build a struct and a
-        # changeset for `Phoenix.HTML.Form`.
-        def get_module_from_type(type) do
-          unquote(Macro.escape(metadata))
-          |> Enum.find(&(to_string(type) == &1.type))
-          |> Map.fetch!(:module)
-        end
-
-        defp get_module_from_data(%{"__type__" => type}) do
-          unquote(Macro.escape(metadata))
-          |> Enum.find(&(type == &1.type))
-          |> Map.fetch!(:module)
-        end
-
-        defp get_module_from_data(attrs) do
-          # check if one list is contained in another
-          # Enum.count(contained -- container) == 0
-          # contained -- container == []
-          unquote(Macro.escape(metadata))
-          |> Enum.filter(&([] != &1.identify_by_fields))
-          |> Enum.find(&([] == &1.identify_by_fields -- Map.keys(attrs)))
-          |> case do
-               nil ->
-                 raise "could not infer polymorphic embed from data #{inspect(attrs)}"
-
-               entry ->
-                 Map.fetch!(entry, :module)
-             end
-        end
-
-        defp get_type_from_module(module) do
-          unquote(Macro.escape(metadata))
-          |> Enum.find(&(module == &1.module))
-          |> Map.fetch!(:type)
         end
       end
     end
