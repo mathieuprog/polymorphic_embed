@@ -147,6 +147,15 @@ Here is an example form using the imported function:
 
 `polymorphic_embed_inputs_for/4` also renders a hidden input for the `"__type__"` field.
 
+### Get the type of a polymorphic embed
+
+Sometimes you need to serialize the polymorphic embed and, once in the front-end, need to distinguish them.
+`get_polymorphic_type/1` returns the type of the polymorphic embed:
+
+```
+PolymorphicEmbed.ChannelData.get_polymorphic_type(SMS) # returns :sms
+```
+
 ## Features
 
 * Detect which types to use for the data being `cast`-ed, based on fields present in the data (no need for a *type* field in the data)
