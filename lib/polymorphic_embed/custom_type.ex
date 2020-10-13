@@ -40,12 +40,12 @@ defmodule PolymorphicEmbed.CustomType do
             |> Enum.filter(&([] != &1.identify_by_fields))
             |> Enum.find(&([] == &1.identify_by_fields -- Map.keys(attrs)))
             |> case do
-                 nil ->
-                   raise "could not infer polymorphic embed from data #{inspect(attrs)}"
+              nil ->
+                raise "could not infer polymorphic embed from data #{inspect(attrs)}"
 
-                 entry ->
-                   Map.fetch!(entry, :module)
-               end
+              entry ->
+                Map.fetch!(entry, :module)
+            end
           end
 
           # Used by form helper `polymorphic_embed_inputs_for/4`.
@@ -78,12 +78,12 @@ defmodule PolymorphicEmbed.CustomType do
           |> Metadata.get_polymorphic_module()
           |> cast_to_changeset(attrs)
           |> case do
-               %{valid?: true} = changeset ->
-                 {:ok, Ecto.Changeset.apply_changes(changeset)}
+            %{valid?: true} = changeset ->
+              {:ok, Ecto.Changeset.apply_changes(changeset)}
 
-               changeset ->
-                 {:error, build_errors(changeset)}
-             end
+            changeset ->
+              {:error, build_errors(changeset)}
+          end
         end
 
         defp cast_to_changeset(%module{} = struct, attrs) do
@@ -141,7 +141,10 @@ defmodule PolymorphicEmbed.CustomType do
         defp maybe_put_type(%{} = map, _, _), do: map
 
         defp dump_value(field, parent_module, [value | rest_values]) do
-          [dump_value(field, parent_module, value) | dump_value(field, parent_module, rest_values)]
+          [
+            dump_value(field, parent_module, value)
+            | dump_value(field, parent_module, rest_values)
+          ]
         end
 
         defp dump_value(field, parent_module, %_module{} = struct) do
@@ -154,7 +157,8 @@ defmodule PolymorphicEmbed.CustomType do
 
             _ ->
               # handle nested polymorphic embeds
-              if Code.ensure_loaded?(type) and Enum.member?(type.module_info[:attributes][:behaviour], PolymorphicEmbed) do
+              if Code.ensure_loaded?(type) and
+                   Enum.member?(type.module_info[:attributes][:behaviour], PolymorphicEmbed) do
                 {:ok, term} = type.dump(struct)
                 term
               else
@@ -170,6 +174,7 @@ defmodule PolymorphicEmbed.CustomType do
             case value do
               %Ecto.Changeset{} = changeset ->
                 Keyword.merge([{field, {"is invalid", changeset.errors}}], all_errors)
+
               _ ->
                 all_errors
             end
