@@ -57,6 +57,8 @@ defmodule PolymorphicEmbed.CustomType do
             |> Map.fetch!(:module)
           end
 
+          def get_polymorphic_type(%module{}), do: get_polymorphic_type(module)
+
           def get_polymorphic_type(module) do
             unquote(Macro.escape(metadata))
             |> Enum.find(&(module == &1.module))
@@ -151,7 +153,7 @@ defmodule PolymorphicEmbed.CustomType do
 
             _ ->
               # handle nested polymorphic embeds
-              if Code.ensure_loaded?(Module.concat(type, :"Elixir.CustomType")) do
+              if Code.ensure_loaded?(type) and Enum.member?(type.module_info[:attributes][:behaviour], PolymorphicEmbed) do
                 {:ok, term} = type.dump(struct)
                 term
               else
