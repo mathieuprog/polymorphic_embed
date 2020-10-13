@@ -63,7 +63,7 @@ defmodule PolymorphicEmbed.CustomType do
             unquote(Macro.escape(metadata))
             |> Enum.find(&(module == &1.module))
             |> Map.fetch!(:type)
-            |> String.to_existing_atom()
+            |> String.to_atom()
           end
         end
 
