@@ -113,7 +113,9 @@ defmodule PolymorphicEmbedTest do
       }
     }
 
-    Repo.insert(reminder)
+    reminder
+    |> Reminder.changeset(%{})
+    |> Repo.insert()
 
     reminder =
       Reminder
