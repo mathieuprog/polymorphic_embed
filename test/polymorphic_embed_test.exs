@@ -46,7 +46,7 @@ defmodule PolymorphicEmbedTest do
     }
 
     insert_result =
-      %Reminder{}
+      %Reminder{channel: %SMS{country_code: 1}}
       |> Reminder.changeset(sms_reminder_attrs)
       |> Repo.insert()
 
@@ -98,6 +98,7 @@ defmodule PolymorphicEmbedTest do
         provider: %TwilioSMSProvider{
           api_key: "foo"
         },
+        country_code: 1,
         number: "02/807.05.53",
         result: %SMSResult{success: true},
         attempts: [
@@ -123,6 +124,50 @@ defmodule PolymorphicEmbedTest do
       |> Repo.one()
 
     assert SMS = reminder.channel.__struct__
+  end
+
+  test "keep existing data" do
+    reminder = %Reminder{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an SMS reminder",
+      channel: %SMS{
+        provider: %TwilioSMSProvider{
+          api_key: "foo"
+        },
+        number: "02/807.05.53",
+        country_code: 32,
+        result: %SMSResult{success: true},
+        attempts: [
+          %SMSAttempts{
+            date: ~U[2020-05-28 07:27:05Z],
+            result: %SMSResult{success: true}
+          },
+          %SMSAttempts{
+            date: ~U[2020-05-28 07:27:05Z],
+            result: %SMSResult{success: true}
+          }
+        ]
+      }
+    }
+
+    changeset =
+      reminder
+      |> Reminder.changeset(%{
+        channel: %{
+          __type__: "sms",
+          number: "54"
+        }
+      })
+
+    changeset
+    |> Repo.insert!()
+
+    reminder =
+      Reminder
+      |> QueryBuilder.where(text: "This is an SMS reminder")
+      |> Repo.one()
+
+    assert reminder.channel.result.success
   end
 
   test "inputs_for/4" do

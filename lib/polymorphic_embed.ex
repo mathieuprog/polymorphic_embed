@@ -30,6 +30,24 @@ defmodule PolymorphicEmbed do
     %{metadata: metadata}
   end
 
+  def cast_polymorphic_embed(changeset, field) do
+    data_for_field =
+      case Map.fetch!(changeset.data, field) do
+        nil ->
+          %{}
+
+        data ->
+          metadata = get_metadata(changeset.data.__struct__, field)
+          map_from_struct(data, :polymorphic_embed, metadata)
+      end
+
+    params_for_field = Map.get(changeset.params, to_string(field)) || %{}
+
+    params = Map.merge(data_for_field, params_for_field)
+
+    Ecto.Changeset.cast(changeset, %{to_string(field) => params}, [field])
+  end
+
   @impl true
   def cast(attrs, %{metadata: metadata}) do
     # convert keys into string (in case they would be atoms)
@@ -142,6 +160,8 @@ defmodule PolymorphicEmbed do
   end
 
   defp do_get_polymorphic_module(%{"__type__" => type}, metadata) do
+    type = to_string(type)
+
     metadata
     |> Enum.find(&(type == &1.type))
     |> Map.fetch!(:module)
@@ -164,8 +184,10 @@ defmodule PolymorphicEmbed do
   end
 
   defp do_get_polymorphic_module(type, metadata) do
+    type = to_string(type)
+
     metadata
-    |> Enum.find(&(to_string(type) == &1.type))
+    |> Enum.find(&(type == &1.type))
     |> Map.fetch!(:module)
   end
 
