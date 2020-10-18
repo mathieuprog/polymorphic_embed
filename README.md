@@ -167,7 +167,7 @@ Add `polymorphic_embed` for Elixir as a dependency in your `mix.exs` file:
 ```elixir
 def deps do
   [
-    {:polymorphic_embed, "~> 0.8.0"}
+    {:polymorphic_embed, "~> 0.9.0"}
   ]
 end
 ```
