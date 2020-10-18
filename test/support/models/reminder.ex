@@ -6,7 +6,16 @@ defmodule PolymorphicEmbed.Reminder do
   schema "reminders" do
     field(:date, :utc_datetime)
     field(:text, :string)
-    field(:channel, PolymorphicEmbed.ChannelData)
+
+    field(:channel, PolymorphicEmbed,
+      types: [
+        sms: PolymorphicEmbed.Channel.SMS,
+        email: [
+          module: PolymorphicEmbed.Channel.Email,
+          identify_by_fields: [:address, :confirmed]
+        ]
+      ]
+    )
 
     timestamps()
   end

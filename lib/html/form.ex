@@ -78,12 +78,11 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
     end
 
     defp get_data(changeset, field, type) do
-      data = Ecto.Changeset.apply_changes(changeset)
+      struct = Ecto.Changeset.apply_changes(changeset)
 
-      case Map.get(data, field) do
+      case Map.get(struct, field) do
         nil ->
-          module = Map.fetch!(changeset.types, field)
-          struct(module.get_polymorphic_module(type))
+          struct(PolymorphicEmbed.get_polymorphic_module(struct.__struct__, field, type))
 
         data ->
           data

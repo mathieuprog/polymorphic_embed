@@ -161,17 +161,23 @@ defmodule PolymorphicEmbedTest do
              ~s(<input id="reminder_channel___type__" name="reminder[channel][__type__]" type="hidden" value="email"><input id="reminder_channel_address" name="reminder[channel][address]" type="text">)
   end
 
-  describe "get_polymorphic_type/1" do
+  describe "get_polymorphic_type/3" do
     test "returns the type for a module" do
-      assert PolymorphicEmbed.ChannelData.get_polymorphic_type(SMS) == :sms
+      assert PolymorphicEmbed.get_polymorphic_type(Reminder, :channel, SMS) == :sms
     end
 
     test "returns the type for a struct" do
-      assert PolymorphicEmbed.ChannelData.get_polymorphic_type(%Email{
+      assert PolymorphicEmbed.get_polymorphic_type(Reminder, :channel, %Email{
                address: "what",
                confirmed: true
              }) ==
                :email
+    end
+  end
+
+  describe "get_polymorphic_module/3" do
+    test "returns the module for a type" do
+      assert PolymorphicEmbed.get_polymorphic_module(Reminder, :channel, :sms) == SMS
     end
   end
 
