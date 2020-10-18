@@ -151,9 +151,11 @@ defmodule PolymorphicEmbed.CustomType do
           type = parent_module.__schema__(:type, field)
 
           case type do
+            {:parameterized, Ecto.Embedded, _} ->
+              dump_embed(struct)
+
             {:embed, _} ->
-              {:ok, term} = Ecto.Type.dump(:map, map_from_struct(struct, :embed))
-              term
+              dump_embed(struct)
 
             _ ->
               # handle nested polymorphic embeds
@@ -168,6 +170,11 @@ defmodule PolymorphicEmbed.CustomType do
         end
 
         defp dump_value(_, _, value), do: value
+
+        defp dump_embed(struct) do
+          {:ok, term} = Ecto.Type.dump(:map, map_from_struct(struct, :embed))
+          term
+        end
 
         defp build_errors(%{errors: errors, changes: changes} = changeset) do
           Enum.reduce(changes, errors, fn {field, value}, all_errors ->
