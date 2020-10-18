@@ -17,7 +17,7 @@ We create the `Email` and `SMS` embedded schemas containing the fields that are 
 channels.
 
 The `Reminder` schema can then contain a `:channel` field that will either hold an `Email` or `SMS` struct, by setting
-its type to the custom type that this library provides.
+its type to the custom type `PolymorphicEmbed` that this library provides.
 
 Find the schema code and explanations below.
 
@@ -25,27 +25,25 @@ Find the schema code and explanations below.
 defmodule MyApp.Reminder do
   use Ecto.Schema
   import Ecto.Changeset
+  import PolymorphicEmbed, only: [cast_polymorphic_embed: 2]
 
   schema "reminders" do
     field :date, :utc_datetime
     field :text, :string
-    field :channel, MyApp.ChannelData
+
+    field :channel,
+      types: [
+        sms: MyApp.Channel.SMS,
+        email: [module: MyApp.Channel.Email, identify_by_fields: [:address, :confirmed]]
+      ]
   end
 
   def changeset(struct, values) do
     struct
-    |> cast(values, [:date, :text, :channel])
+    |> cast(values, [:date, :text])
+    |> cast_polymorphic_embed(:channel)
     |> validate_required(:date)
   end
-end
-```
-
-```elixir
-defmodule MyApp.ChannelData do
-  use PolymorphicEmbed, types: [
-    sms: MyApp.Channel.SMS,
-    email: [module: MyApp.Channel.Email, identify_by_fields: [:address, :confirmed]]
-  ]
 end
 ```
 
@@ -82,11 +80,8 @@ defmodule MyApp.Channel.SMS do
 end
 ```
 
-You have noticed in the code above that you need to define an intermediary module, in this example `ChannelData`. This
-module is the Ecto Type (through `use`-ing `PolymorphicEmbed`).
-
-The `:types` option for `PolymorphicEmbed` contains a keyword list mapping an atom representing the type (in this
-example `:email` and `:sms`) with the corresponding embedded schema module.
+The `:types` option for the `PolymorphicEmbed` custom type contains a keyword list mapping an atom representing the type
+(in this example `:email` and `:sms`) with the corresponding embedded schema module.
 
 There are two strategies to detect the right embedded schema to use:
 
@@ -153,7 +148,7 @@ Sometimes you need to serialize the polymorphic embed and, once in the front-end
 `get_polymorphic_type/1` returns the type of the polymorphic embed:
 
 ```
-PolymorphicEmbed.ChannelData.get_polymorphic_type(SMS) # returns :sms
+PolymorphicEmbed.get_polymorphic_type(Reminder, :channel, SMS) == :sms
 ```
 
 ## Features
