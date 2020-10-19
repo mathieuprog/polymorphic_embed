@@ -170,6 +170,79 @@ defmodule PolymorphicEmbedTest do
     assert reminder.channel.result.success
   end
 
+  test "missing __type__ leads to changeset error" do
+    sms_reminder_attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an SMS reminder",
+      channel: %{
+        number: "02/807.05.53",
+        country_code: 1,
+        result: %{success: true},
+        attempts: [
+          %{
+            date: ~U[2020-05-28 07:27:05Z],
+            result: %{success: true}
+          },
+          %{
+            date: ~U[2020-05-29 07:27:05Z],
+            result: %{success: false}
+          },
+          %{
+            date: ~U[2020-05-30 07:27:05Z],
+            result: %{success: true}
+          }
+        ],
+        provider: %{
+          __type__: "twilio",
+          api_key: "foo"
+        }
+      }
+    }
+
+    insert_result =
+      %Reminder{}
+      |> Reminder.changeset(sms_reminder_attrs)
+      |> Repo.insert()
+
+    assert {:error, %Ecto.Changeset{errors: [channel: {"is invalid", []}]}} = insert_result
+  end
+
+  test "missing __type__ leads to raising error" do
+    sms_reminder_attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an SMS reminder",
+      channel: %{
+        __type__: "sms",
+        number: "02/807.05.53",
+        country_code: 1,
+        result: %{success: true},
+        attempts: [
+          %{
+            date: ~U[2020-05-28 07:27:05Z],
+            result: %{success: true}
+          },
+          %{
+            date: ~U[2020-05-29 07:27:05Z],
+            result: %{success: false}
+          },
+          %{
+            date: ~U[2020-05-30 07:27:05Z],
+            result: %{success: true}
+          }
+        ],
+        provider: %{
+          api_key: "foo"
+        }
+      }
+    }
+
+    assert_raise RuntimeError, ~r"could not infer polymorphic embed from data", fn ->
+      %Reminder{}
+      |> Reminder.changeset(sms_reminder_attrs)
+      |> Repo.insert()
+    end
+  end
+
   test "inputs_for/4" do
     attrs = %{
       date: ~U[2020-05-28 02:57:19Z],

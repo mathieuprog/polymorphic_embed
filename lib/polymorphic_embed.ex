@@ -27,17 +27,22 @@ defmodule PolymorphicEmbed do
           }
       end)
 
-    %{metadata: metadata}
+    %{
+      metadata: metadata,
+      on_type_not_found: Keyword.get(opts, :on_type_not_found, :changeset_error)
+    }
   end
 
   def cast_polymorphic_embed(changeset, field) do
+    %{metadata: metadata, on_type_not_found: on_type_not_found} =
+      get_options(changeset.data.__struct__, field)
+
     data_for_field =
       case Map.fetch!(changeset.data, field) do
         nil ->
           %{}
 
         data ->
-          metadata = get_metadata(changeset.data.__struct__, field)
           map_from_struct(data, :polymorphic_embed, metadata)
       end
 
@@ -45,15 +50,17 @@ defmodule PolymorphicEmbed do
 
     params = Map.merge(data_for_field, params_for_field)
 
-    Ecto.Changeset.cast(changeset, %{to_string(field) => params}, [field])
+    if do_get_polymorphic_module(params, metadata, on_type_not_found) do
+      Ecto.Changeset.cast(changeset, %{to_string(field) => params}, [field])
+    else
+      Ecto.Changeset.add_error(changeset, field, "is invalid")
+    end
   end
 
   @impl true
-  def cast(attrs, %{metadata: metadata}) do
-    # convert keys into string (in case they would be atoms)
-    for({key, val} <- attrs, into: %{}, do: {to_string(key), val})
+  def cast(attrs, %{metadata: metadata, on_type_not_found: on_type_not_found}) do
     # get the right module based on the __type__ key or infer from the keys
-    |> do_get_polymorphic_module(metadata)
+    do_get_polymorphic_module(attrs, metadata, on_type_not_found)
     |> cast_to_changeset(attrs)
     |> case do
       %{valid?: true} = changeset ->
@@ -92,10 +99,10 @@ defmodule PolymorphicEmbed do
   end
 
   @impl true
-  def load(data, _loader, %{metadata: metadata}) do
+  def load(data, _loader, %{metadata: metadata, on_type_not_found: on_type_not_found}) do
     struct =
       data
-      |> do_get_polymorphic_module(metadata)
+      |> do_get_polymorphic_module(metadata, on_type_not_found)
       |> cast_to_changeset(data)
       |> Ecto.Changeset.apply_changes()
 
@@ -155,19 +162,19 @@ defmodule PolymorphicEmbed do
   end
 
   def get_polymorphic_module(schema, field, type_or_data) do
-    metadata = get_metadata(schema, field)
-    do_get_polymorphic_module(type_or_data, metadata)
+    %{metadata: metadata, on_type_not_found: on_type_not_found} = get_options(schema, field)
+    do_get_polymorphic_module(type_or_data, metadata, on_type_not_found)
   end
 
-  defp do_get_polymorphic_module(%{"__type__" => type}, metadata) do
-    type = to_string(type)
+  defp do_get_polymorphic_module(%{:__type__ => type}, metadata, on_type_not_found), do:
+    do_get_polymorphic_module(type, metadata, on_type_not_found)
 
-    metadata
-    |> Enum.find(&(type == &1.type))
-    |> Map.fetch!(:module)
-  end
+  defp do_get_polymorphic_module(%{"__type__" => type}, metadata, on_type_not_found), do:
+    do_get_polymorphic_module(type, metadata, on_type_not_found)
 
-  defp do_get_polymorphic_module(%{} = attrs, metadata) do
+  defp do_get_polymorphic_module(%{} = attrs, metadata, on_type_not_found) do
+    # convert keys into string (in case they would be atoms)
+    attrs = for({key, val} <- attrs, into: %{}, do: {to_string(key), val})
     # check if one list is contained in another
     # Enum.count(contained -- container) == 0
     # contained -- container == []
@@ -176,14 +183,16 @@ defmodule PolymorphicEmbed do
     |> Enum.find(&([] == &1.identify_by_fields -- Map.keys(attrs)))
     |> case do
       nil ->
-        raise "could not infer polymorphic embed from data #{inspect(attrs)}"
+        if on_type_not_found == :raise do
+          raise "could not infer polymorphic embed from data #{inspect(attrs)}"
+        end
 
       entry ->
         Map.fetch!(entry, :module)
     end
   end
 
-  defp do_get_polymorphic_module(type, metadata) do
+  defp do_get_polymorphic_module(type, metadata, _) do
     type = to_string(type)
 
     metadata
@@ -192,7 +201,7 @@ defmodule PolymorphicEmbed do
   end
 
   def get_polymorphic_type(schema, field, module_or_struct) do
-    metadata = get_metadata(schema, field)
+    %{metadata: metadata} = get_options(schema, field)
     do_get_polymorphic_type(module_or_struct, metadata)
   end
 
@@ -206,15 +215,15 @@ defmodule PolymorphicEmbed do
     |> String.to_atom()
   end
 
-  defp get_metadata(schema, field) do
+  defp get_options(schema, field) do
     try do
       schema.__schema__(:type, field)
     rescue
       _ in UndefinedFunctionError ->
         raise ArgumentError, "#{inspect(schema)} is not an Ecto schema"
     else
-      {:parameterized, PolymorphicEmbed, %{metadata: metadata}} -> metadata
-      {_, {:parameterized, PolymorphicEmbed, %{metadata: metadata}}} -> metadata
+      {:parameterized, PolymorphicEmbed, options} -> options
+      {_, {:parameterized, PolymorphicEmbed, options}} -> options
       nil -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
     end
   end

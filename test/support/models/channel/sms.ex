@@ -13,7 +13,8 @@ defmodule PolymorphicEmbed.Channel.SMS do
       types: [
         twilio: PolymorphicEmbed.Channel.TwilioSMSProvider,
         test: PolymorphicEmbed.Channel.AcmeSMSProvider
-      ]
+      ],
+      on_type_not_found: :raise
     )
 
     embeds_one(:result, PolymorphicEmbed.Channel.SMSResult)
