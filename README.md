@@ -107,6 +107,12 @@ parameter is then no longer required.
 Note that you may still include a `__type__` parameter that will take precedence over this strategy (this could still be
 useful if you need to store incomplete data, which might not allow identifying the type).
 
+### Options
+
+* `:types` - discussed above.
+* `:on_type_not_found` - specify whether to raise or add a changeset error if the embed's type cannot be inferred. By
+  default a changeset error "is invalid" is added.
+
 ### Displaying form inputs and errors in Phoenix templates
 
 The library comes with a form helper in order to build form inputs for polymorphic embeds and display changeset errors.
