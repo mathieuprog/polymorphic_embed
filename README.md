@@ -151,7 +151,7 @@ Here is an example form using the imported function:
 ### Get the type of a polymorphic embed
 
 Sometimes you need to serialize the polymorphic embed and, once in the front-end, need to distinguish them.
-`get_polymorphic_type/1` returns the type of the polymorphic embed:
+`get_polymorphic_type/3` returns the type of the polymorphic embed:
 
 ```
 PolymorphicEmbed.get_polymorphic_type(Reminder, :channel, SMS) == :sms
