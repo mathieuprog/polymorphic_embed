@@ -110,8 +110,8 @@ useful if you need to store incomplete data, which might not allow identifying t
 ### Options
 
 * `:types` - discussed above.
-* `:on_type_not_found` - specify whether to raise or add a changeset error if the embed's type cannot be inferred. By
-  default a changeset error "is invalid" is added.
+* `:on_type_not_found` - specify whether to raise or add a changeset error if the embed's type cannot be inferred.
+  Possible values are `:raise` and `:changeset_error`. By default, a changeset error "is invalid" is added.
 
 ### Displaying form inputs and errors in Phoenix templates
 
