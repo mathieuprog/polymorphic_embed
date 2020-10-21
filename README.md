@@ -31,7 +31,7 @@ defmodule MyApp.Reminder do
     field :date, :utc_datetime
     field :text, :string
 
-    field :channel,
+    field :channel, PolymorphicEmbed,
       types: [
         sms: MyApp.Channel.SMS,
         email: [module: MyApp.Channel.Email, identify_by_fields: [:address, :confirmed]]
