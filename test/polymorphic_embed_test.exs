@@ -243,6 +243,30 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  test "cannot load the right struct" do
+    %Reminder{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an SMS reminder",
+      channel: %SMS{
+        country_code: 1,
+        number: "02/807.05.53"
+      }
+    }
+    |> Repo.insert()
+
+    Ecto.Adapters.SQL.query!(
+      Repo,
+      "UPDATE reminders SET channel = jsonb_set(channel, '{__type__}', '\"foo\"')",
+      []
+    )
+
+    assert_raise RuntimeError, ~r"could not infer polymorphic embed from data .* \"foo\"", fn ->
+      Reminder
+      |> QueryBuilder.where(text: "This is an SMS reminder")
+      |> Repo.one()
+    end
+  end
+
   test "inputs_for/4" do
     attrs = %{
       date: ~U[2020-05-28 02:57:19Z],
