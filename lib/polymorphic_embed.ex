@@ -103,6 +103,8 @@ defmodule PolymorphicEmbed do
   end
 
   @impl true
+  def load(nil, _loader, _params), do: {:ok, nil}
+
   def load(data, _loader, %{metadata: metadata}) do
     module = do_get_polymorphic_module(data, metadata)
 
@@ -241,5 +243,5 @@ defmodule PolymorphicEmbed do
   end
 
   defp raise_cannot_infer_type_from_data(data),
-       do: raise "could not infer polymorphic embed from data #{inspect(data)}"
+    do: raise("could not infer polymorphic embed from data #{inspect(data)}")
 end
