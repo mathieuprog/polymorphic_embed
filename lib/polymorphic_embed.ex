@@ -38,26 +38,26 @@ defmodule PolymorphicEmbed do
       get_options(changeset.data.__struct__, field)
 
     data_for_field =
-      case Map.fetch!(changeset.data, field) do
-        nil ->
-          %{}
-
-        data ->
-          map_from_struct(data, :polymorphic_embed, metadata)
+      if data = Map.fetch!(changeset.data, field) do
+        map_from_struct(data, :polymorphic_embed, metadata)
       end
 
-    params_for_field = Map.get(changeset.params, to_string(field)) || %{}
+    params_for_field = Map.get(changeset.params, to_string(field))
 
-    params = Map.merge(data_for_field, params_for_field)
+    if data_for_field || params_for_field do
+      params = Map.merge(data_for_field || %{}, params_for_field || %{})
 
-    if do_get_polymorphic_module(params, metadata) do
-      Ecto.Changeset.cast(changeset, %{to_string(field) => params}, [field])
-    else
-      if on_type_not_found == :raise do
-        raise_cannot_infer_type_from_data(params)
+      if do_get_polymorphic_module(params, metadata) do
+        Ecto.Changeset.cast(changeset, %{to_string(field) => params}, [field])
       else
-        Ecto.Changeset.add_error(changeset, field, "is invalid")
+        if on_type_not_found == :raise do
+          raise_cannot_infer_type_from_data(params)
+        else
+          Ecto.Changeset.add_error(changeset, field, "is invalid")
+        end
       end
+    else
+      changeset
     end
   end
 
