@@ -103,22 +103,20 @@ defmodule PolymorphicEmbed do
   end
 
   @impl true
+  def load(nil, _loader, _params), do: {:ok, nil}
+
   def load(data, _loader, %{metadata: metadata}) do
-    if is_nil(data) do
-      {:ok, nil}
-    else
-      module = do_get_polymorphic_module(data, metadata)
+    module = do_get_polymorphic_module(data, metadata)
 
-      unless module do
-        raise_cannot_infer_type_from_data(data)
-      end
-
-      struct =
-        cast_to_changeset(module, data)
-        |> Ecto.Changeset.apply_changes()
-
-      {:ok, struct}
+    unless module do
+      raise_cannot_infer_type_from_data(data)
     end
+
+    struct =
+      cast_to_changeset(module, data)
+      |> Ecto.Changeset.apply_changes()
+
+    {:ok, struct}
   end
 
   @impl true
