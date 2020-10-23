@@ -90,6 +90,25 @@ defmodule PolymorphicEmbedTest do
     assert Email = reminder.channel.__struct__
   end
 
+  test "with a null embed" do
+    insert_result =
+      %Reminder{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is an Email reminder",
+        channel: nil
+      }
+      |> Repo.insert()
+
+    assert {:ok, %Reminder{}} = insert_result
+
+    reminder =
+      Reminder
+      |> QueryBuilder.where(text: "This is an Email reminder")
+      |> Repo.one()
+
+    assert is_nil(reminder.channel)
+  end
+
   test "receive embed as struct" do
     reminder = %Reminder{
       date: ~U[2020-05-28 02:57:19Z],
