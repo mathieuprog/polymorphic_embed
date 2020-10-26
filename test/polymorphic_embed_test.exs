@@ -308,6 +308,70 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  test "supports lists of polymorphic embeds" do
+    attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is a reminder with multiple contexts",
+      channel: %{address: "john@example.com", confirmed: true},
+      contexts: [
+        %{
+          __type__: "device",
+          id: "asdfghjkjhgfds",
+          type: "cellphone"
+        },
+        %{
+          __type__: "age",
+          age: "aquarius"
+        }
+      ]
+    }
+
+    %Reminder{}
+    |> Reminder.changeset(attrs)
+    |> Repo.insert!()
+
+    reminder =
+      Reminder
+      |> QueryBuilder.where(text: "This is a reminder with multiple contexts")
+      |> Repo.one()
+
+    assert reminder.contexts |> length() == 2
+
+    assert [
+             %Reminder.Context.Device{
+               id: "asdfghjkjhgfds",
+               type: "cellphone"
+             },
+             %Reminder.Context.Age{
+               age: "aquarius"
+             }
+           ] = reminder.contexts
+  end
+
+  test "validates lists of polymorphic embeds" do
+    attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is a reminder with multiple contexts",
+      contexts: [
+        %{
+          id: "asdfghjkjhgfds",
+          type: "cellphone"
+        },
+        %{
+          age: "aquarius"
+        }
+      ]
+    }
+
+    insert_result =
+      %Reminder{}
+      |> Reminder.changeset(attrs)
+      |> Repo.insert()
+
+    assert {:error, %Ecto.Changeset{errors: [contexts: {"is invalid on indexes 0, 1", []}]}} =
+             insert_result
+  end
+
   test "inputs_for/4" do
     attrs = %{
       date: ~U[2020-05-28 02:57:19Z],

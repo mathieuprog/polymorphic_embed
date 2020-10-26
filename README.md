@@ -2,10 +2,7 @@
 
 `polymorphic_embed` brings support for polymorphic/dynamic embedded schemas in Ecto.
 
-Ecto's `embeds_one` macro requires a specific schema module to be specified. This library removes this restriction by
-**dynamically** determining which schema to use, based on data to be stored (from a form or API) and retrieved (from the
-data source).
-
+Ecto's `embeds_one` and `embeds_many` macros require a specific schema module to be specified. This library removes this restriction by **dynamically** determining which schema to use, based on data to be stored (from a form or API) and retrieved (from the data source).
 
 ## Usage
 
@@ -13,11 +10,9 @@ data source).
 
 Let's say we want a schema `Reminder` representing a reminder for an event, that can be sent either by email or SMS.
 
-We create the `Email` and `SMS` embedded schemas containing the fields that are specific for each of those communication
-channels.
+We create the `Email` and `SMS` embedded schemas containing the fields that are specific for each of those communication channels.
 
-The `Reminder` schema can then contain a `:channel` field that will either hold an `Email` or `SMS` struct, by setting
-its type to the custom type `PolymorphicEmbed` that this library provides.
+The `Reminder` schema can then contain a `:channel` field that will either hold an `Email` or `SMS` struct, by setting its type to the custom type `PolymorphicEmbed` that this library provides.
 
 Find the schema code and explanations below.
 
@@ -80,8 +75,7 @@ defmodule MyApp.Channel.SMS do
 end
 ```
 
-The `:types` option for the `PolymorphicEmbed` custom type contains a keyword list mapping an atom representing the type
-(in this example `:email` and `:sms`) with the corresponding embedded schema module.
+The `:types` option for the `PolymorphicEmbed` custom type contains a keyword list mapping an atom representing the type (in this example `:email` and `:sms`) with the corresponding embedded schema module.
 
 There are two strategies to detect the right embedded schema to use:
 
@@ -100,12 +94,39 @@ containing the type of channel (`"email"` or `"sms"`).
   identify_by_fields: [:address, :confirmed]]]
 ```
 
-Here we specify how the type can be determined based on the presence of given fields. In this example, if the data
-contains `:address` and `:confirmed` parameters (or their string version), the type is `:email`. A `"__type__"`
-parameter is then no longer required.
+Here we specify how the type can be determined based on the presence of given fields. In this example, if the data contains `:address` and `:confirmed` parameters (or their string version), the type is `:email`. A `"__type__"` parameter is then no longer required.
 
-Note that you may still include a `__type__` parameter that will take precedence over this strategy (this could still be
-useful if you need to store incomplete data, which might not allow identifying the type).
+Note that you may still include a `__type__` parameter that will take precedence over this strategy (this could still be useful if you need to store incomplete data, which might not allow identifying the type).
+
+### Multiple Embeds (`embeds_many`)
+
+Just declare the field as an array:
+
+```elixir
+defmodule MyApp.Reminder do
+  use Ecto.Schema
+  import Ecto.Changeset
+  import PolymorphicEmbed, only: [cast_polymorphic_embed: 2]
+
+  schema "reminders" do
+    field :date, :utc_datetime
+    field :text, :string
+
+    field :channels, {:array, PolymorphicEmbed},
+      types: [
+        sms: MyApp.Channel.SMS,
+        email: [module: MyApp.Channel.Email, identify_by_fields: [:address, :confirmed]]
+      ]
+  end
+
+  def changeset(struct, values) do
+    struct
+    |> cast(values, [:date, :text])
+    |> cast_polymorphic_embed(:channels)
+    |> validate_required(:date)
+  end
+end
+```
 
 ### Options
 

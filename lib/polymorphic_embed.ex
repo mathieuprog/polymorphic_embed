@@ -34,9 +34,15 @@ defmodule PolymorphicEmbed do
   end
 
   def cast_polymorphic_embed(changeset, field) do
-    %{metadata: metadata, on_type_not_found: on_type_not_found} =
+    %{array?: array?, metadata: metadata, on_type_not_found: on_type_not_found} =
       get_options(changeset.data.__struct__, field)
 
+    if array?,
+      do: cast_polymorphic_embed_many(changeset, field, metadata, on_type_not_found),
+      else: cast_polymorphic_embed_one(changeset, field, metadata, on_type_not_found)
+  end
+
+  defp cast_polymorphic_embed_one(changeset, field, metadata, on_type_not_found) do
     data_for_field =
       if data = Map.fetch!(changeset.data, field) do
         map_from_struct(data, :polymorphic_embed, metadata)
@@ -55,6 +61,53 @@ defmodule PolymorphicEmbed do
         else
           Ecto.Changeset.add_error(changeset, field, "is invalid")
         end
+      end
+    else
+      changeset
+    end
+  end
+
+  defp cast_polymorphic_embed_many(changeset, field, metadata, on_type_not_found) do
+    data_for_field =
+      if data = Map.fetch!(changeset.data, field) do
+        Enum.map(data, &map_from_struct(&1, :polymorphic_embed, metadata))
+      end
+
+    params_for_field = Map.get(changeset.params, to_string(field))
+
+    if data_for_field || params_for_field do
+      params = params_for_field || data_for_field
+
+      params
+      |> Stream.with_index()
+      |> Enum.reduce(:ok, fn {el, idx}, acc ->
+        if do_get_polymorphic_module(el, metadata) do
+          acc
+        else
+          error_desc = {el, idx}
+
+          case acc do
+            {:error, errors} -> {:error, [error_desc | errors]}
+            :ok -> {:error, [error_desc]}
+          end
+        end
+      end)
+      |> case do
+        :ok ->
+          Ecto.Changeset.cast(changeset, %{to_string(field) => params}, [field])
+
+        {:error, errors} ->
+          indexes =
+            errors
+            |> Enum.map(&elem(&1, 1))
+            |> Enum.reverse()
+            |> Enum.join(", ")
+
+          if on_type_not_found == :raise do
+            raise_cannot_infer_type_from_data(params, indexes)
+          else
+            Ecto.Changeset.add_error(changeset, field, "is invalid on indexes #{indexes}")
+          end
       end
     else
       changeset
@@ -224,8 +277,9 @@ defmodule PolymorphicEmbed do
       _ in UndefinedFunctionError ->
         raise ArgumentError, "#{inspect(schema)} is not an Ecto schema"
     else
-      {:parameterized, PolymorphicEmbed, options} -> options
-      {_, {:parameterized, PolymorphicEmbed, options}} -> options
+      {:parameterized, PolymorphicEmbed, options} -> Map.put(options, :array?, false)
+      {:array, {:parameterized, PolymorphicEmbed, options}} -> Map.put(options, :array?, true)
+      {_, {:parameterized, PolymorphicEmbed, options}} -> Map.put(options, :array?, false)
       nil -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
     end
   end
@@ -244,4 +298,8 @@ defmodule PolymorphicEmbed do
 
   defp raise_cannot_infer_type_from_data(data),
     do: raise("could not infer polymorphic embed from data #{inspect(data)}")
+
+  defp raise_cannot_infer_type_from_data(data, indexes),
+    do:
+      raise("could not infer polymorphic embed from data #{inspect(data)} at indexes #{indexes}")
 end

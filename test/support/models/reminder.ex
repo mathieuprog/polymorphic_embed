@@ -1,6 +1,7 @@
 defmodule PolymorphicEmbed.Reminder do
   use Ecto.Schema
   use QueryBuilder
+
   import Ecto.Changeset
   import PolymorphicEmbed, only: [cast_polymorphic_embed: 2]
 
@@ -18,6 +19,15 @@ defmodule PolymorphicEmbed.Reminder do
       ]
     )
 
+    field(:contexts, {:array, PolymorphicEmbed},
+      default: [],
+      types: [
+        location: PolymorphicEmbed.Reminder.Context.Location,
+        age: PolymorphicEmbed.Reminder.Context.Age,
+        device: PolymorphicEmbed.Reminder.Context.Device
+      ]
+    )
+
     timestamps()
   end
 
@@ -25,6 +35,7 @@ defmodule PolymorphicEmbed.Reminder do
     struct
     |> cast(values, [:date, :text])
     |> cast_polymorphic_embed(:channel)
+    |> cast_polymorphic_embed(:contexts)
     |> validate_required(:date)
   end
 end
