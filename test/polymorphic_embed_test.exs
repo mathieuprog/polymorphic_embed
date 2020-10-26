@@ -6,6 +6,7 @@ defmodule PolymorphicEmbedTest do
   import Phoenix.HTML.Form
   import PolymorphicEmbed.HTML.Form
 
+  alias PolymorphicEmbed.Country
   alias PolymorphicEmbed.Repo
   alias PolymorphicEmbed.Reminder
   alias PolymorphicEmbed.Channel.{SMS, Email}
@@ -370,6 +371,107 @@ defmodule PolymorphicEmbedTest do
 
     assert {:error, %Ecto.Changeset{errors: [contexts: {"is invalid on indexes 0, 1", []}]}} =
              insert_result
+  end
+
+  test "ignores unloaded ecto associations" do
+    attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is a reminder with location context",
+      channel: %{address: "john@example.com", confirmed: true},
+      contexts: [
+        %{
+          __type__: "location",
+          country_id: 42,
+          address: "Abbey Road, London"
+        }
+      ]
+    }
+
+    %Reminder{}
+    |> Reminder.changeset(attrs)
+    |> Repo.insert!()
+
+    reminder =
+      Reminder
+      |> QueryBuilder.where(text: "This is a reminder with location context")
+      |> Repo.one()
+
+    assert reminder.contexts |> length() == 1
+
+    assert %Reminder.Context.Location{
+             country: %Ecto.Association.NotLoaded{__field__: :country},
+             country_id: 42,
+             address: "Abbey Road, London"
+           } = List.first(reminder.contexts)
+  end
+
+  test "ignores preloaded ecto associations" do
+    attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is a reminder with location context and preloaded assoc",
+      channel: %{address: "john@example.com", confirmed: true},
+      contexts: [
+        %{
+          __type__: "location",
+          country_id: 42,
+          country: %Country{id: 42, name: "United Kingdom"},
+          address: "Abbey Road, London"
+        }
+      ]
+    }
+
+    %Reminder{}
+    |> Reminder.changeset(attrs)
+    |> Repo.insert!()
+
+    reminder =
+      Reminder
+      |> QueryBuilder.where(text: "This is a reminder with location context and preloaded assoc")
+      |> Repo.one()
+
+    assert reminder.contexts |> length() == 1
+
+    assert %Reminder.Context.Location{
+             country: %Ecto.Association.NotLoaded{__field__: :country},
+             country_id: 42,
+             address: "Abbey Road, London"
+           } = List.first(reminder.contexts)
+  end
+
+  test "does store embedded ecto associations" do
+    attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is a reminder with embedded data",
+      contexts: [
+        %{
+          __type__: "device",
+          id: "ABCD",
+          type: "Phone",
+          extra: %{
+            imei: "DCBA"
+          }
+        }
+      ]
+    }
+
+    %Reminder{}
+    |> Reminder.changeset(attrs)
+    |> Repo.insert!()
+
+    reminder =
+      Reminder
+      |> QueryBuilder.where(text: "This is a reminder with embedded data")
+      |> Repo.one()
+
+    assert reminder.contexts |> length() == 1
+
+    assert %Reminder.Context.Device{
+             id: "ABCD",
+             type: "Phone",
+             extra: %Reminder.Context.Device.Extra{
+               imei: "DCBA"
+             }
+           } = List.first(reminder.contexts)
   end
 
   test "inputs_for/4" do

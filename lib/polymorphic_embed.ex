@@ -180,6 +180,7 @@ defmodule PolymorphicEmbed do
   defp map_from_struct(%module{} = struct, :polymorphic_embed, metadata) do
     Map.from_struct(struct)
     |> Map.put(:__type__, do_get_polymorphic_type(module, metadata))
+    |> Stream.reject(fn {field, value} -> is_ecto_assoc?(module, field, value) end)
     |> Enum.map(fn {field, value} -> {field, dump_value(field, module, value)} end)
     |> Enum.into(%{})
   end
@@ -283,6 +284,13 @@ defmodule PolymorphicEmbed do
       nil -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
     end
   end
+
+  defp is_ecto_assoc?(_module, _field, %Ecto.Association.NotLoaded{}), do: true
+
+  defp is_ecto_assoc?(module, field, %_struct{}),
+    do: match?({:assoc, _}, module.__schema__(:type, field))
+
+  defp is_ecto_assoc?(_module, _field, _value), do: false
 
   defp build_errors(%{errors: errors, changes: changes}) do
     Enum.reduce(changes, errors, fn {field, value}, all_errors ->
