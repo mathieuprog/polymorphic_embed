@@ -62,6 +62,8 @@ defmodule PolymorphicEmbed do
   end
 
   @impl true
+  def cast(nil, _), do: {:ok, nil}
+
   def cast(attrs, %{metadata: metadata}) do
     # get the right module based on the __type__ key or infer from the keys
     do_get_polymorphic_module(attrs, metadata)
