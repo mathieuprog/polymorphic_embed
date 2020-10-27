@@ -12,6 +12,8 @@ defmodule PolymorphicEmbedTest do
   alias PolymorphicEmbed.Channel.{TwilioSMSProvider}
   alias PolymorphicEmbed.Channel.{SMSResult, SMSAttempts}
 
+  alias PolymorphicEmbed.Factory
+
   setup do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Repo)
   end
@@ -100,6 +102,25 @@ defmodule PolymorphicEmbedTest do
       |> Repo.insert()
 
     assert {:ok, %Reminder{}} = insert_result
+
+    reminder =
+      Reminder
+      |> QueryBuilder.where(text: "This is an Email reminder")
+      |> Repo.one()
+
+    assert is_nil(reminder.channel)
+  end
+
+  test "inserting a null embed using an ExMachina factory" do
+    insert_reminder =
+      Factory.insert(
+        :reminder, 
+        date: ~U[2020-05-28 02:57:19Z], 
+        text: "This is an Email reminder",
+        channel: nil
+      )
+
+    refute is_nil(insert_reminder)
 
     reminder =
       Reminder
