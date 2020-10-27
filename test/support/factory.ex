@@ -1,5 +1,5 @@
 defmodule PolymorphicEmbed.Factory do
-  use ExMachina.Ecto, repo: MyApp.Repo
+  use ExMachina.Ecto, repo: PolymorphicEmbed.Repo
 
   alias PolymorphicEmbed.{Channel, Reminder}
 

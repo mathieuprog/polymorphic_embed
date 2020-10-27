@@ -11,7 +11,6 @@ defmodule PolymorphicEmbedTest do
   alias PolymorphicEmbed.Channel.{SMS, Email}
   alias PolymorphicEmbed.Channel.{TwilioSMSProvider}
   alias PolymorphicEmbed.Channel.{SMSResult, SMSAttempts}
-
   alias PolymorphicEmbed.Factory
 
   setup do
@@ -66,92 +65,6 @@ defmodule PolymorphicEmbedTest do
     assert ~U[2020-05-28 07:27:05Z] == hd(reminder.channel.attempts).date
   end
 
-  test "without __type__" do
-    attrs = %{
-      date: ~U[2020-05-28 02:57:19Z],
-      text: "This is an Email reminder",
-      channel: %{
-        address: "john@example.com",
-        valid: true,
-        confirmed: false
-      }
-    }
-
-    insert_result =
-      %Reminder{}
-      |> Reminder.changeset(attrs)
-      |> Repo.insert()
-
-    assert {:ok, %Reminder{}} = insert_result
-
-    reminder =
-      Reminder
-      |> QueryBuilder.where(text: "This is an Email reminder")
-      |> Repo.one()
-
-    assert Email = reminder.channel.__struct__
-  end
-
-  test "loading a null embed" do
-    insert_result =
-      %Reminder{
-        date: ~U[2020-05-28 02:57:19Z],
-        text: "This is an Email reminder",
-        channel: nil
-      }
-      |> Repo.insert()
-
-    assert {:ok, %Reminder{}} = insert_result
-
-    reminder =
-      Reminder
-      |> QueryBuilder.where(text: "This is an Email reminder")
-      |> Repo.one()
-
-    assert is_nil(reminder.channel)
-  end
-
-  test "inserting a null embed using an ExMachina factory" do
-    insert_reminder =
-      Factory.insert(
-        :reminder, 
-        date: ~U[2020-05-28 02:57:19Z], 
-        text: "This is an Email reminder",
-        channel: nil
-      )
-
-    refute is_nil(insert_reminder)
-
-    reminder =
-      Reminder
-      |> QueryBuilder.where(text: "This is an Email reminder")
-      |> Repo.one()
-
-    assert is_nil(reminder.channel)
-  end
-
-  test "casting a null embed" do
-    attrs = %{
-      date: ~U[2020-05-28 02:57:19Z],
-      text: "This is an Email reminder",
-      channel: nil
-    }
-
-    insert_result =
-      %Reminder{}
-      |> Reminder.changeset(attrs)
-      |> Repo.insert()
-
-    assert {:ok, %Reminder{}} = insert_result
-
-    reminder =
-      Reminder
-      |> QueryBuilder.where(text: "This is an Email reminder")
-      |> Repo.one()
-
-    assert is_nil(reminder.channel)
-  end
-
   test "receive embed as struct" do
     reminder = %Reminder{
       date: ~U[2020-05-28 02:57:19Z],
@@ -186,6 +99,92 @@ defmodule PolymorphicEmbedTest do
       |> Repo.one()
 
     assert SMS = reminder.channel.__struct__
+  end
+
+  test "without __type__" do
+    attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an Email reminder",
+      channel: %{
+        address: "john@example.com",
+        valid: true,
+        confirmed: false
+      }
+    }
+
+    insert_result =
+      %Reminder{}
+      |> Reminder.changeset(attrs)
+      |> Repo.insert()
+
+    assert {:ok, %Reminder{}} = insert_result
+
+    reminder =
+      Reminder
+      |> QueryBuilder.where(text: "This is an Email reminder")
+      |> Repo.one()
+
+    assert Email = reminder.channel.__struct__
+  end
+
+  test "loading a nil embed" do
+    insert_result =
+      %Reminder{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is an Email reminder",
+        channel: nil
+      }
+      |> Repo.insert()
+
+    assert {:ok, %Reminder{}} = insert_result
+
+    reminder =
+      Reminder
+      |> QueryBuilder.where(text: "This is an Email reminder")
+      |> Repo.one()
+
+    assert is_nil(reminder.channel)
+  end
+
+  test "inserting a nil embed using an ExMachina factory" do
+    insert_reminder =
+      Factory.insert(
+        :reminder,
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is an Email reminder",
+        channel: nil
+      )
+
+    refute is_nil(insert_reminder)
+
+    reminder =
+      Reminder
+      |> QueryBuilder.where(text: "This is an Email reminder")
+      |> Repo.one()
+
+    assert is_nil(reminder.channel)
+  end
+
+  test "casting a nil embed" do
+    attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an Email reminder",
+      channel: nil
+    }
+
+    insert_result =
+      %Reminder{}
+      |> Reminder.changeset(attrs)
+      |> Repo.insert()
+
+    assert {:ok, %Reminder{}} = insert_result
+
+    reminder =
+      Reminder
+      |> QueryBuilder.where(text: "This is an Email reminder")
+      |> Repo.one()
+
+    assert is_nil(reminder.channel)
   end
 
   test "keep existing data" do
