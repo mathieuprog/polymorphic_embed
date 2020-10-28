@@ -20,7 +20,6 @@ defmodule PolymorphicEmbed.Reminder do
     )
 
     field(:contexts, {:array, PolymorphicEmbed},
-      default: [],
       types: [
         location: PolymorphicEmbed.Reminder.Context.Location,
         age: PolymorphicEmbed.Reminder.Context.Age,
