@@ -215,6 +215,50 @@ defmodule PolymorphicEmbedTest do
     assert reminder.channel.result.success
   end
 
+  test "params with string keys" do
+    reminder = %Reminder{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an SMS reminder",
+      channel: %SMS{
+        provider: %TwilioSMSProvider{
+          api_key: "foo"
+        },
+        number: "02/807.05.53",
+        country_code: 32,
+        result: %SMSResult{success: true},
+        attempts: [
+          %SMSAttempts{
+            date: ~U[2020-05-28 07:27:05Z],
+            result: %SMSResult{success: true}
+          },
+          %SMSAttempts{
+            date: ~U[2020-05-28 07:27:05Z],
+            result: %SMSResult{success: true}
+          }
+        ]
+      }
+    }
+
+    changeset =
+      reminder
+      |> Reminder.changeset(%{
+        "channel" => %{
+          "__type__" => "sms",
+          "number" => "54"
+        }
+      })
+
+    changeset
+    |> Repo.insert!()
+
+    reminder =
+      Reminder
+      |> QueryBuilder.where(text: "This is an SMS reminder")
+      |> Repo.one()
+
+    assert reminder.channel.result.success
+  end
+
   test "missing __type__ leads to changeset error" do
     sms_reminder_attrs = %{
       date: ~U[2020-05-28 02:57:19Z],
@@ -335,7 +379,7 @@ defmodule PolymorphicEmbedTest do
       end)
 
     assert contents ==
-             ~s(<input id="reminder_channel___type__" name="reminder[channel][__type__]" type="hidden" value="email"><input id="reminder_channel_address" name="reminder[channel][address]" type="text">)
+             ~s(<input id="reminder_channel___type__" name="reminder[channel][__type__]" type="hidden" value="email"><input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">)
 
     contents =
       safe_inputs_for(Map.put(changeset, :action, :insert), :channel, :email, fn f ->
@@ -345,7 +389,7 @@ defmodule PolymorphicEmbedTest do
       end)
 
     assert contents ==
-             ~s(<input id="reminder_channel___type__" name="reminder[channel][__type__]" type="hidden" value="email"><input id="reminder_channel_address" name="reminder[channel][address]" type="text">)
+             ~s(<input id="reminder_channel___type__" name="reminder[channel][__type__]" type="hidden" value="email"><input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">)
   end
 
   describe "get_polymorphic_type/3" do

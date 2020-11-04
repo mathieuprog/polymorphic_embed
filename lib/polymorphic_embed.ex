@@ -45,7 +45,9 @@ defmodule PolymorphicEmbed do
     params_for_field = Map.get(changeset.params, to_string(field))
 
     if data_for_field || params_for_field do
-      params = Map.merge(data_for_field || %{}, params_for_field || %{})
+      params =
+        Map.merge(data_for_field || %{}, params_for_field || %{})
+        |> convert_map_keys_to_string()
 
       if do_get_polymorphic_module(params, metadata) do
         Ecto.Changeset.cast(changeset, %{to_string(field) => params}, [field])
@@ -185,8 +187,6 @@ defmodule PolymorphicEmbed do
     do: do_get_polymorphic_module(type, metadata)
 
   defp do_get_polymorphic_module(%{} = attrs, metadata) do
-    # convert keys into string (in case they would be atoms)
-    attrs = for({key, val} <- attrs, into: %{}, do: {to_string(key), val})
     # check if one list is contained in another
     # Enum.count(contained -- container) == 0
     # contained -- container == []
@@ -243,6 +243,9 @@ defmodule PolymorphicEmbed do
       end
     end)
   end
+
+  defp convert_map_keys_to_string(%{} = map),
+    do: for({key, val} <- map, into: %{}, do: {to_string(key), val})
 
   defp raise_cannot_infer_type_from_data(data),
     do: raise("could not infer polymorphic embed from data #{inspect(data)}")
