@@ -80,10 +80,12 @@ defmodule MyApp.Channel.SMS do
 end
 ```
 
-The `:types` option for the `PolymorphicEmbed` custom type contains a keyword list mapping an atom representing the type
-(in this example `:email` and `:sms`) with the corresponding embedded schema module.
+The `:types` option for the `PolymorphicEmbed` custom type either contains a keyword list 
+mapping an atom representing the type (in this example `:email` and `:sms`) with the corresponding 
+embedded schema module, or specifies a function that can be used to map any type value into
+a corresponding schema module.
 
-There are two strategies to detect the right embedded schema to use:
+There are four strategies to detect the right embedded schema to use:
 
 1.
 ```elixir
@@ -106,6 +108,50 @@ parameter is then no longer required.
 
 Note that you may still include a `__type__` parameter that will take precedence over this strategy (this could still be
 useful if you need to store incomplete data, which might not allow identifying the type).
+
+3.
+```elixir
+# Converts an arbritary type atom or string key to a schema module, e.g. "email" to MyApp.Channel.Email
+def lookup_type(key, :module) do
+  case to_string(key) do
+    "sms" -> MyApp.Channel.SMS
+    _other -> Module.safe_concat(["MyApp.Channel", String.capitalize(key)])
+  end
+end
+
+# Reverse lookup, converts the module to the appropriate type
+def lookup_type(key, :type) do
+  Module.split(key) 
+  |> List.last() 
+  |> String.downcase() 
+  |> String.to_atom()
+end
+
+
+types: &MyModule.lookup_type/2
+```
+
+If you specify `types: &MyModule.lookup_type/2` with the format `&Mod.fun/arity` as in the example above,
+you supply a reference to a 2-arity function that converts both ways between types and modules.
+The first argument to the function is the key to be converted, and the second argument is 
+either `:module` to convert from a type to a module, or `:key` to convert from a module to the type.
+This allows you to embed arbitrary schemas without having to list
+them all explicitly. The function should return an atom, not a string value.
+
+4.
+```elixir
+types: :by_module
+```
+
+If you specify `types: :by_module`, the `"__type__"` (or `:__type__`) parameter should contain the fully qualified
+and reachable module name of the embedded schema, such as "MyApp.Channel.Email". This is equivalent to specifying
+`types: &MyModule.lookup_type/2`, where `lookup_type` was defined as:
+
+```elixir
+def lookup_type(key, :module), do: Module.safe_concat([to_string(key)])
+def lookup_type(key, :type), do: key
+```
+
 
 ### Options
 

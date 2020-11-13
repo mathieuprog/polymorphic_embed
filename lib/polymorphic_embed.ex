@@ -7,25 +7,37 @@ defmodule PolymorphicEmbed do
   @impl true
   def init(opts) do
     metadata =
-      Keyword.fetch!(opts, :types)
-      |> Enum.map(fn
-        {type_name, type_opts} when is_list(type_opts) ->
-          module = Keyword.fetch!(type_opts, :module)
-          identify_by_fields = Keyword.fetch!(type_opts, :identify_by_fields)
+      case Keyword.get(opts, :types) do
+        types when is_list(types) ->
+          types
+          |> Enum.map(fn
+            {type_name, type_opts} when is_list(type_opts) ->
+              module = Keyword.fetch!(type_opts, :module)
+              identify_by_fields = Keyword.fetch!(type_opts, :identify_by_fields)
 
-          %{
-            type: type_name |> to_string(),
-            module: module,
-            identify_by_fields: identify_by_fields |> Enum.map(&to_string/1)
-          }
+              %{
+                type: type_name |> to_string(),
+                module: module,
+                identify_by_fields: identify_by_fields |> Enum.map(&to_string/1)
+              }
 
-        {type_name, module} ->
-          %{
-            type: type_name |> to_string(),
-            module: module,
-            identify_by_fields: []
-          }
-      end)
+            {type_name, module} ->
+              %{
+                type: type_name |> to_string(),
+                module: module,
+                identify_by_fields: []
+              }
+          end)
+
+        :by_module ->
+          %{lookup_type_fun: :by_module}
+
+        type_fun when is_function(type_fun, 2) ->
+          %{lookup_type_fun: type_fun}
+
+        _ ->
+          raise ArgumentError, ":types option must be list or :by_module or 2-arity function"
+      end
 
     %{
       metadata: metadata,
@@ -186,7 +198,7 @@ defmodule PolymorphicEmbed do
   defp do_get_polymorphic_module(%{"__type__" => type}, metadata),
     do: do_get_polymorphic_module(type, metadata)
 
-  defp do_get_polymorphic_module(%{} = attrs, metadata) do
+  defp do_get_polymorphic_module(%{} = attrs, metadata) when is_list(metadata) do
     # check if one list is contained in another
     # Enum.count(contained -- container) == 0
     # contained -- container == []
@@ -196,12 +208,23 @@ defmodule PolymorphicEmbed do
     |> (&(&1 && Map.fetch!(&1, :module))).()
   end
 
-  defp do_get_polymorphic_module(type, metadata) do
+  defp do_get_polymorphic_module(type, metadata) when is_list(metadata) do
     type = to_string(type)
 
     metadata
     |> Enum.find(&(type == &1.type))
     |> (&(&1 && Map.fetch!(&1, :module))).()
+  end
+
+  defp do_get_polymorphic_module(type, %{lookup_type_fun: :by_module}) do
+    type = to_string(type)
+
+    Module.safe_concat([type])
+  end
+
+  defp do_get_polymorphic_module(type, %{lookup_type_fun: type_fun})
+       when is_function(type_fun) do
+    type_fun.(type, :module)
   end
 
   def get_polymorphic_type(schema, field, module_or_struct) do
@@ -212,11 +235,19 @@ defmodule PolymorphicEmbed do
   defp do_get_polymorphic_type(%module{}, metadata),
     do: do_get_polymorphic_type(module, metadata)
 
-  defp do_get_polymorphic_type(module, metadata) do
+  defp do_get_polymorphic_type(module, metadata) when is_list(metadata) do
     metadata
     |> Enum.find(&(module == &1.module))
     |> Map.fetch!(:type)
     |> String.to_atom()
+  end
+
+  defp do_get_polymorphic_type(module, %{lookup_type_fun: :by_module}) do
+    module
+  end
+
+  defp do_get_polymorphic_type(module, %{lookup_type_fun: type_fun}) when is_function(type_fun) do
+    type_fun.(module, :type)
   end
 
   defp get_options(schema, field) do
