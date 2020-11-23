@@ -171,6 +171,34 @@ defmodule PolymorphicEmbedTest do
     assert is_nil(reminder.channel)
   end
 
+  test "casting a nil embed when embed not empty" do
+    attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an Email reminder",
+      channel: nil
+    }
+
+    insert_result =
+      %Reminder{
+        channel: %{
+          address: "john@example.com",
+          valid: true,
+          confirmed: false
+        }
+      }
+      |> Reminder.changeset(attrs)
+      |> Repo.insert()
+
+    assert {:ok, %Reminder{}} = insert_result
+
+    reminder =
+      Reminder
+      |> QueryBuilder.where(text: "This is an Email reminder")
+      |> Repo.one()
+
+    assert is_nil(reminder.channel)
+  end
+
   test "keep existing data" do
     reminder = %Reminder{
       date: ~U[2020-05-28 02:57:19Z],
