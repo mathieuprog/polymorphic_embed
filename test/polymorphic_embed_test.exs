@@ -64,6 +64,54 @@ defmodule PolymorphicEmbedTest do
     assert ~U[2020-05-28 07:27:05Z] == hd(reminder.channel.attempts).date
   end
 
+  test "with :by_module" do
+    sms_reminder_attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This reminder has an SMS source",
+      source: %{
+        __type__: "PolymorphicEmbed.Channel.SMS",
+        number: "02/807.05.53",
+        result: %{success: true},
+        attempts: [
+          %{
+            date: ~U[2020-05-28 07:27:05Z],
+            result: %{success: true}
+          },
+          %{
+            date: ~U[2020-05-29 07:27:05Z],
+            result: %{success: false}
+          },
+          %{
+            date: ~U[2020-05-30 07:27:05Z],
+            result: %{success: true}
+          }
+        ],
+        provider: %{
+          __type__: "twilio",
+          api_key: "foo"
+        }
+      }
+    }
+
+    insert_result =
+      %Reminder{source: %SMS{country_code: 1}}
+      |> Reminder.changeset(sms_reminder_attrs)
+      |> Repo.insert()
+
+    assert {:ok, %Reminder{}} = insert_result
+
+    reminder =
+      Reminder
+      |> QueryBuilder.where(text: "This reminder has an SMS source")
+      |> Repo.one()
+
+    assert SMS = reminder.source.__struct__
+    assert TwilioSMSProvider = reminder.source.provider.__struct__
+    assert SMSResult == reminder.source.result.__struct__
+    assert true == reminder.source.result.success
+    assert ~U[2020-05-28 07:27:05Z] == hd(reminder.source.attempts).date
+  end
+
   test "receive embed as struct" do
     reminder = %Reminder{
       date: ~U[2020-05-28 02:57:19Z],
@@ -98,6 +146,42 @@ defmodule PolymorphicEmbedTest do
       |> Repo.one()
 
     assert SMS = reminder.channel.__struct__
+  end
+
+  test "receive :by_module embed as struct" do
+    reminder = %Reminder{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This reminder has an SMS source",
+      source: %SMS{
+        provider: %TwilioSMSProvider{
+          api_key: "foo"
+        },
+        country_code: 1,
+        number: "02/807.05.53",
+        result: %SMSResult{success: true},
+        attempts: [
+          %SMSAttempts{
+            date: ~U[2020-05-28 07:27:05Z],
+            result: %SMSResult{success: true}
+          },
+          %SMSAttempts{
+            date: ~U[2020-05-28 07:27:05Z],
+            result: %SMSResult{success: true}
+          }
+        ]
+      }
+    }
+
+    reminder
+    |> Reminder.changeset(%{})
+    |> Repo.insert()
+
+    reminder =
+      Reminder
+      |> QueryBuilder.where(text: "This reminder has an SMS source")
+      |> Repo.one()
+
+    assert SMS = reminder.source.__struct__
   end
 
   test "without __type__" do
@@ -459,11 +543,35 @@ defmodule PolymorphicEmbedTest do
              }) ==
                :email
     end
+
+    test "returns the type for a :by_module type" do
+      assert PolymorphicEmbed.get_polymorphic_type(Reminder, :source, SMS) == SMS
+    end
+
+    test "returns the type for a lookup type" do
+      assert PolymorphicEmbed.get_polymorphic_type(Reminder, :reference, SMS) == :sms
+    end
   end
 
   describe "get_polymorphic_module/3" do
     test "returns the module for a type" do
       assert PolymorphicEmbed.get_polymorphic_module(Reminder, :channel, :sms) == SMS
+    end
+
+    test "returns the module for a :by_module type with a string key" do
+      assert PolymorphicEmbed.get_polymorphic_module(
+               Reminder,
+               :source,
+               "PolymorphicEmbed.Channel.SMS"
+             ) == SMS
+    end
+
+    test "returns the module for a :by_module type with an atom key" do
+      assert PolymorphicEmbed.get_polymorphic_module(Reminder, :source, SMS) == SMS
+    end
+
+    test "returns the module for a lookup type" do
+      assert PolymorphicEmbed.get_polymorphic_module(Reminder, :reference, :sms) == SMS
     end
   end
 
