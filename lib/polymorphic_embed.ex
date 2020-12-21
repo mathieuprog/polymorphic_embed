@@ -79,6 +79,9 @@ defmodule PolymorphicEmbed do
     end
   end
 
+  @impl true
+  def embed_as(_format, _params), do: :dump
+
   defp cast_to_changeset(%module{} = struct, attrs) do
     if function_exported?(module, :changeset, 2) do
       module.changeset(struct, attrs)
@@ -128,51 +131,14 @@ defmodule PolymorphicEmbed do
     Ecto.Type.dump(:map, map_from_struct(struct, :polymorphic_embed, metadata))
   end
 
+  def dump(nil, _dumper, _params) do
+    Ecto.Type.dump(:map, nil)
+  end
+
   defp map_from_struct(%module{} = struct, :polymorphic_embed, metadata) do
-    Map.from_struct(struct)
+    struct
+    |> Ecto.embedded_dump(:json)
     |> Map.put(:__type__, do_get_polymorphic_type(module, metadata))
-    |> Enum.map(fn {field, value} -> {field, dump_value(field, module, value)} end)
-    |> Enum.into(%{})
-  end
-
-  defp map_from_struct(%module{} = struct, :embed) do
-    Map.from_struct(struct)
-    |> Enum.map(fn {field, value} -> {field, dump_value(field, module, value)} end)
-    |> Enum.into(%{})
-  end
-
-  defp dump_value(field, parent_module, [value | rest_values]) do
-    [
-      dump_value(field, parent_module, value)
-      | dump_value(field, parent_module, rest_values)
-    ]
-  end
-
-  defp dump_value(field, parent_module, %_module{} = struct) do
-    type = parent_module.__schema__(:type, field)
-
-    case type do
-      {:parameterized, Ecto.Embedded, _} ->
-        {:ok, term} = dump_embed(struct)
-        term
-
-      {:embed, _} ->
-        {:ok, term} = dump_embed(struct)
-        term
-
-      {:parameterized, PolymorphicEmbed, %{metadata: metadata}} ->
-        {:ok, term} = dump(struct, nil, %{metadata: metadata})
-        term
-
-      _ ->
-        struct
-    end
-  end
-
-  defp dump_value(_, _, value), do: value
-
-  defp dump_embed(struct) do
-    Ecto.Type.dump(:map, map_from_struct(struct, :embed))
   end
 
   def get_polymorphic_module(schema, field, type_or_data) do
