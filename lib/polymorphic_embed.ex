@@ -118,26 +118,19 @@ defmodule PolymorphicEmbed do
   def load(nil, _loader, _params), do: {:ok, nil}
 
   def load(data, _loader, %{metadata: metadata}) do
-    module = do_get_polymorphic_module(data, metadata)
-
-    unless module do
-      raise_cannot_infer_type_from_data(data)
+    case do_get_polymorphic_module(data, metadata) do
+      nil -> raise_cannot_infer_type_from_data(data)
+      module when is_atom(module) -> {:ok, Ecto.embedded_load(module, data, :json)}
     end
-
-    struct =
-      cast_to_changeset(module, data)
-      |> Ecto.Changeset.apply_changes()
-
-    {:ok, struct}
   end
 
   @impl true
-  def dump(%_module{} = struct, _dumper, %{metadata: metadata}) do
-    Ecto.Type.dump(:map, map_from_struct(struct, metadata))
+  def dump(%_module{} = struct, dumper, %{metadata: metadata}) do
+    dumper.(:map, map_from_struct(struct, metadata))
   end
 
-  def dump(nil, _dumper, _params) do
-    Ecto.Type.dump(:map, nil)
+  def dump(nil, dumper, _params) do
+    dumper.(:map, nil)
   end
 
   defp map_from_struct(%module{} = struct, metadata) do
