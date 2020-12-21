@@ -44,45 +44,52 @@ defmodule PolymorphicEmbed do
         changeset
 
       {:ok, nil} ->
-        Ecto.Changeset.cast(changeset, %{to_string(field) => nil}, [field])
+        Ecto.Changeset.put_change(changeset, field, nil)
 
       {:ok, params_for_field} ->
-        data_for_field =
-          if data = Map.fetch!(changeset.data, field) do
-            map_from_struct(data, metadata)
-          end
-
         params =
-          Map.merge(data_for_field || %{}, params_for_field || %{})
+          Map.fetch!(changeset.data, field)
+          |> case do
+            nil -> %{}
+            struct -> map_from_struct(struct, metadata)
+          end
+          |> Map.merge(params_for_field || %{})
           |> convert_map_keys_to_string()
 
-        if do_get_polymorphic_module(params, metadata) do
-          Ecto.Changeset.cast(changeset, %{to_string(field) => params}, [field])
-        else
-          if on_type_not_found == :raise do
+        case do_get_polymorphic_module(params, metadata) do
+          nil when on_type_not_found == :raise ->
             raise_cannot_infer_type_from_data(params)
-          else
+
+          nil when on_type_not_found == :changeset_error ->
             Ecto.Changeset.add_error(changeset, field, "is invalid")
-          end
+
+          module ->
+            module
+            |> struct()
+            |> cast_to_changeset(params)
+            |> case do
+              %{valid?: true} = embed_changeset ->
+                Ecto.Changeset.put_change(
+                  changeset,
+                  field,
+                  Ecto.Changeset.apply_changes(embed_changeset)
+                )
+
+              %{valid?: false} = embed_changeset ->
+                changeset
+                |> Ecto.Changeset.put_change(field, Ecto.Changeset.apply_changes(embed_changeset))
+                |> Ecto.Changeset.add_error(field, "is invalid", embed_changeset.errors)
+            end
         end
     end
   end
 
   @impl true
-  def cast(nil, _), do: {:ok, nil}
-
-  def cast(attrs, %{metadata: metadata}) do
-    # get the right module based on the __type__ key or infer from the keys
-    do_get_polymorphic_module(attrs, metadata)
-    |> cast_to_changeset(attrs)
-    |> case do
-      %{valid?: true} = changeset ->
-        {:ok, Ecto.Changeset.apply_changes(changeset)}
-
-      changeset ->
-        {:error, build_errors(changeset)}
-    end
-  end
+  def cast(_data, _params),
+    do:
+      raise(
+        "#{__MODULE__} must not be casted using Ecto.Changeset.cast/4, use #{__MODULE__}.cast_polymorphic_embed/2 instead."
+      )
 
   @impl true
   def embed_as(_format, _params), do: :dump
@@ -91,27 +98,8 @@ defmodule PolymorphicEmbed do
     if function_exported?(module, :changeset, 2) do
       module.changeset(struct, attrs)
     else
-      fields_without_embeds = module.__schema__(:fields) -- module.__schema__(:embeds)
-
-      Ecto.Changeset.cast(struct, attrs, fields_without_embeds)
-      |> cast_embeds_to_changeset(module.__schema__(:embeds))
+      Ecto.Changeset.cast(struct, attrs, module.__schema__(:fields))
     end
-  end
-
-  defp cast_to_changeset(module, attrs) when is_atom(module) do
-    cast_to_changeset(struct(module), attrs)
-  end
-
-  defp cast_embeds_to_changeset(changeset, embed_fields) do
-    Enum.reduce(embed_fields, changeset, fn embed_field, changeset ->
-      Ecto.Changeset.cast_embed(
-        changeset,
-        embed_field,
-        with: fn embed_struct, data ->
-          cast_to_changeset(embed_struct, data)
-        end
-      )
-    end)
   end
 
   @impl true
@@ -194,18 +182,6 @@ defmodule PolymorphicEmbed do
       {_, {:parameterized, PolymorphicEmbed, options}} -> options
       nil -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
     end
-  end
-
-  defp build_errors(%{errors: errors, changes: changes}) do
-    Enum.reduce(changes, errors, fn {field, value}, all_errors ->
-      case value do
-        %Ecto.Changeset{} = changeset ->
-          Keyword.merge([{field, {"is invalid", changeset.errors}}], all_errors)
-
-        _ ->
-          all_errors
-      end
-    end)
   end
 
   defp convert_map_keys_to_string(%{} = map),
