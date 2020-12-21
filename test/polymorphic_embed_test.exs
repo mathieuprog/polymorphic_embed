@@ -180,7 +180,7 @@ defmodule PolymorphicEmbedTest do
 
     insert_result =
       %Reminder{
-        channel: %{
+        channel: %Email{
           address: "john@example.com",
           valid: true,
           confirmed: false

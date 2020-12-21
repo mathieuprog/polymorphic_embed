@@ -37,29 +37,34 @@ defmodule PolymorphicEmbed do
     %{metadata: metadata, on_type_not_found: on_type_not_found} =
       get_options(changeset.data.__struct__, field)
 
-    data_for_field =
-      if data = Map.fetch!(changeset.data, field) do
-        map_from_struct(data, :polymorphic_embed, metadata)
-      end
+    changeset.params
+    |> Map.fetch(to_string(field))
+    |> case do
+      :error ->
+        changeset
 
-    params_for_field = Map.get(changeset.params, to_string(field))
+      {:ok, nil} ->
+        Ecto.Changeset.cast(changeset, %{to_string(field) => nil}, [field])
 
-    if data_for_field || params_for_field do
-      params =
-        Map.merge(data_for_field || %{}, params_for_field || %{})
-        |> convert_map_keys_to_string()
+      {:ok, params_for_field} ->
+        data_for_field =
+          if data = Map.fetch!(changeset.data, field) do
+            map_from_struct(data, metadata)
+          end
 
-      if do_get_polymorphic_module(params, metadata) do
-        Ecto.Changeset.cast(changeset, %{to_string(field) => params}, [field])
-      else
-        if on_type_not_found == :raise do
-          raise_cannot_infer_type_from_data(params)
+        params =
+          Map.merge(data_for_field || %{}, params_for_field || %{})
+          |> convert_map_keys_to_string()
+
+        if do_get_polymorphic_module(params, metadata) do
+          Ecto.Changeset.cast(changeset, %{to_string(field) => params}, [field])
         else
-          Ecto.Changeset.add_error(changeset, field, "is invalid")
+          if on_type_not_found == :raise do
+            raise_cannot_infer_type_from_data(params)
+          else
+            Ecto.Changeset.add_error(changeset, field, "is invalid")
+          end
         end
-      end
-    else
-      changeset
     end
   end
 
@@ -128,14 +133,14 @@ defmodule PolymorphicEmbed do
 
   @impl true
   def dump(%_module{} = struct, _dumper, %{metadata: metadata}) do
-    Ecto.Type.dump(:map, map_from_struct(struct, :polymorphic_embed, metadata))
+    Ecto.Type.dump(:map, map_from_struct(struct, metadata))
   end
 
   def dump(nil, _dumper, _params) do
     Ecto.Type.dump(:map, nil)
   end
 
-  defp map_from_struct(%module{} = struct, :polymorphic_embed, metadata) do
+  defp map_from_struct(%module{} = struct, metadata) do
     struct
     |> Ecto.embedded_dump(:json)
     |> Map.put(:__type__, do_get_polymorphic_type(module, metadata))
