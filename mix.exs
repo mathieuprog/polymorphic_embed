@@ -1,7 +1,7 @@
 defmodule PolymorphicEmbed.MixProject do
   use Mix.Project
 
-  @version "0.14.0"
+  @version "0.15.0"
 
   def project do
     [
@@ -37,7 +37,7 @@ defmodule PolymorphicEmbed.MixProject do
       {:ex_doc, "~> 0.23", only: :dev},
       {:ecto_sql, "~> 3.5", only: :test},
       {:postgrex, "~> 0.15", only: :test},
-      {:query_builder, "~> 0.13", only: :test},
+      {:query_builder, "~> 0.19.2", only: :test},
       {:phoenix_ecto, "~> 4.2", only: :test}
     ]
   end
