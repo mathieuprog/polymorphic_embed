@@ -64,6 +64,26 @@ defmodule PolymorphicEmbedTest do
     assert ~U[2020-05-28 07:27:05Z] == hd(reminder.channel.attempts).date
   end
 
+  test "invalid values" do
+    sms_reminder_attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an SMS reminder",
+      channel: %{
+        __type__: "sms"
+      }
+    }
+
+    insert_result =
+      %Reminder{channel: %SMS{country_code: 1}}
+      |> Reminder.changeset(sms_reminder_attrs)
+      |> Repo.insert()
+
+    assert {:error, %Ecto.Changeset{errors: errors}} = insert_result
+    assert [{:channel, {"is invalid", error_meta}}] = errors
+
+    assert %{number: {"can't be blank", [validation: :required]}} = Map.new(error_meta)
+  end
+
   test "receive embed as struct" do
     reminder = %Reminder{
       date: ~U[2020-05-28 02:57:19Z],
@@ -143,10 +163,6 @@ defmodule PolymorphicEmbedTest do
       |> Repo.one()
 
     assert is_nil(reminder.channel)
-  end
-
-  test "simulate ExMachina's cast for nil value" do
-    assert {:ok, nil} = Ecto.Type.cast({:parameterized, PolymorphicEmbed, %{metadata: []}}, nil)
   end
 
   test "casting a nil embed" do
