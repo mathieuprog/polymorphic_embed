@@ -14,7 +14,8 @@ defmodule PolymorphicEmbed.Channel.SMS do
         twilio: PolymorphicEmbed.Channel.TwilioSMSProvider,
         test: PolymorphicEmbed.Channel.AcmeSMSProvider
       ],
-      on_type_not_found: :raise
+      on_type_not_found: :raise,
+      on_replace: :update
     )
 
     embeds_one(:result, PolymorphicEmbed.Channel.SMSResult)

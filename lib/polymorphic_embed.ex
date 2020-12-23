@@ -6,6 +6,10 @@ defmodule PolymorphicEmbed do
 
   @impl true
   def init(opts) do
+    if Keyword.get(opts, :on_replace) != :update do
+      raise("`:on_replace` option for polymorphic embed must be set to `:update`")
+    end
+
     metadata =
       Keyword.fetch!(opts, :types)
       |> Enum.map(fn
@@ -53,7 +57,7 @@ defmodule PolymorphicEmbed do
             nil -> %{}
             struct -> map_from_struct(struct, metadata)
           end
-          |> Map.merge(params_for_field || %{})
+          |> Map.merge(params_for_field)
           |> convert_map_keys_to_string()
 
         case do_get_polymorphic_module(params, metadata) do
@@ -64,9 +68,7 @@ defmodule PolymorphicEmbed do
             Ecto.Changeset.add_error(changeset, field, "is invalid")
 
           module ->
-            module
-            |> struct()
-            |> cast_to_changeset(params)
+            module.changeset(struct(module), params)
             |> case do
               %{valid?: true} = embed_changeset ->
                 Ecto.Changeset.put_change(
@@ -77,8 +79,8 @@ defmodule PolymorphicEmbed do
 
               %{valid?: false} = embed_changeset ->
                 changeset
-                |> Ecto.Changeset.put_change(field, Ecto.Changeset.apply_changes(embed_changeset))
-                |> Ecto.Changeset.add_error(field, "is invalid", embed_changeset.errors)
+                |> Ecto.Changeset.put_change(field, embed_changeset)
+                |> Map.put(:valid?, false)
             end
         end
     end
@@ -94,14 +96,6 @@ defmodule PolymorphicEmbed do
   @impl true
   def embed_as(_format, _params), do: :dump
 
-  defp cast_to_changeset(%module{} = struct, attrs) do
-    if function_exported?(module, :changeset, 2) do
-      module.changeset(struct, attrs)
-    else
-      Ecto.Changeset.cast(struct, attrs, module.__schema__(:fields))
-    end
-  end
-
   @impl true
   def load(nil, _loader, _params), do: {:ok, nil}
 
@@ -113,6 +107,10 @@ defmodule PolymorphicEmbed do
   end
 
   @impl true
+  def dump(%Ecto.Changeset{valid?: false}, _dumper, _params) do
+    raise "cannot dump invalid changeset"
+  end
+
   def dump(%_module{} = struct, dumper, %{metadata: metadata}) do
     dumper.(:map, map_from_struct(struct, metadata))
   end

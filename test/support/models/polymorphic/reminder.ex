@@ -15,7 +15,8 @@ defmodule PolymorphicEmbed.Reminder do
           module: PolymorphicEmbed.Channel.Email,
           identify_by_fields: [:address, :confirmed]
         ]
-      ]
+      ],
+      on_replace: :update
     )
 
     timestamps()
