@@ -35,7 +35,8 @@ defmodule MyApp.Reminder do
       types: [
         sms: MyApp.Channel.SMS,
         email: [module: MyApp.Channel.Email, identify_by_fields: [:address, :confirmed]]
-      ]
+      ],
+      on_replace: :update
   end
 
   def changeset(struct, values) do
@@ -112,6 +113,9 @@ useful if you need to store incomplete data, which might not allow identifying t
 * `:types` - discussed above.
 * `:on_type_not_found` - specify whether to raise or add a changeset error if the embed's type cannot be inferred.
   Possible values are `:raise` and `:changeset_error`. By default, a changeset error "is invalid" is added.
+* `:on_replace` - mandatory option that can only be set to `:update` (see `:on_replace` option for `embeds_one` docs; we
+  must explicitly set it to `:update` as the default value for `embeds_one` is `:raise`, and because this library only
+  supports the behavior of `:update`).
 
 ### Displaying form inputs and errors in Phoenix templates
 
