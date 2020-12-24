@@ -2,10 +2,9 @@
 
 `polymorphic_embed` brings support for polymorphic/dynamic embedded schemas in Ecto.
 
-Ecto's `embeds_one` macro requires a specific schema module to be specified. This library removes this restriction by
+Ecto's `embeds_one` and `embeds_many` macros require a specific schema module to be specified. This library removes this restriction by
 **dynamically** determining which schema to use, based on data to be stored (from a form or API) and retrieved (from the
 data source).
-
 
 ## Usage
 
@@ -107,6 +106,20 @@ parameter is then no longer required.
 
 Note that you may still include a `__type__` parameter that will take precedence over this strategy (this could still be
 useful if you need to store incomplete data, which might not allow identifying the type).
+
+### List of polymorphic embeds
+
+Lists of polymorphic embeds are also supported:
+
+```
+field :contexts, {:array, PolymorphicEmbed},
+  types: [
+    location: MyApp.Context.Location,
+    age: MyApp.Context.Age,
+    device: MyApp.Context.Device
+  ],
+  on_replace: :delete
+```
 
 ### Options
 
