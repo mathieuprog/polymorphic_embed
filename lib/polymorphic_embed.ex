@@ -7,7 +7,7 @@ defmodule PolymorphicEmbed do
   @impl true
   def init(opts) do
     if Keyword.get(opts, :on_replace) not in [:update, :delete] do
-      raise("`:on_replace` option for polymorphic embed must be set to `:update` or `:delete`")
+      raise("`:on_replace` option for polymorphic embed must be set to `:update` (single embed) or `:delete` (list of embeds)")
     end
 
     metadata =
@@ -33,13 +33,22 @@ defmodule PolymorphicEmbed do
 
     %{
       metadata: metadata,
-      on_type_not_found: Keyword.get(opts, :on_type_not_found, :changeset_error)
+      on_type_not_found: Keyword.get(opts, :on_type_not_found, :changeset_error),
+      on_replace: Keyword.fetch!(opts, :on_replace)
     }
   end
 
   def cast_polymorphic_embed(changeset, field) do
-    %{array?: array?, metadata: metadata, on_type_not_found: on_type_not_found} =
+    %{array?: array?, metadata: metadata, on_type_not_found: on_type_not_found, on_replace: on_replace} =
       get_options(changeset.data.__struct__, field)
+
+    if array? and on_replace != :delete do
+      raise "`:on_replace` option for field #{inspect field} must be set to `:update`"
+    end
+
+    if not array? and on_replace != :update do
+      raise "`:on_replace` option for field #{inspect field} must be set to `:delete`"
+    end
 
     changeset.params
     |> Map.fetch(to_string(field))
