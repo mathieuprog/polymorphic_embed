@@ -126,9 +126,8 @@ field :contexts, {:array, PolymorphicEmbed},
 * `:types` - discussed above.
 * `:on_type_not_found` - specify whether to raise or add a changeset error if the embed's type cannot be inferred.
   Possible values are `:raise` and `:changeset_error`. By default, a changeset error "is invalid" is added.
-* `:on_replace` - mandatory option that can only be set to `:update` (see `:on_replace` option for `embeds_one` docs; we
-  must explicitly set it to `:update` as the default value for `embeds_one` is `:raise`, and because this library only
-  supports the behavior of `:update`).
+* `:on_replace` - mandatory option that can only be set to `:update` for a single embed and `:delete` for a list of
+  embeds (we force a value as the default value of this option for `embeds_one` and `embeds_many` is `:raise`).
 
 ### Displaying form inputs and errors in Phoenix templates
 
