@@ -9,6 +9,8 @@ defmodule PolymorphicEmbed.Regular.Reminder do
 
     embeds_one(:channel, PolymorphicEmbed.Regular.Channel.SMS, on_replace: :update)
 
+    embeds_many(:contexts, PolymorphicEmbed.Regular.Reminder.Context.Location, on_replace: :delete)
+
     timestamps()
   end
 
@@ -16,6 +18,7 @@ defmodule PolymorphicEmbed.Regular.Reminder do
     struct
     |> cast(values, [:date, :text])
     |> cast_embed(:channel)
+    |> cast_embed(:contexts)
     |> validate_required(:date)
   end
 end

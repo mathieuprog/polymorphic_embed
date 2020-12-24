@@ -19,6 +19,15 @@ defmodule PolymorphicEmbed.Reminder do
       on_replace: :update
     )
 
+    field(:contexts, {:array, PolymorphicEmbed},
+      types: [
+        location: PolymorphicEmbed.Reminder.Context.Location,
+        age: PolymorphicEmbed.Reminder.Context.Age,
+        device: PolymorphicEmbed.Reminder.Context.Device
+      ],
+      on_replace: :delete
+    )
+
     timestamps()
   end
 
@@ -26,6 +35,7 @@ defmodule PolymorphicEmbed.Reminder do
     struct
     |> cast(values, [:date, :text])
     |> cast_polymorphic_embed(:channel)
+    |> cast_polymorphic_embed(:contexts)
     |> validate_required(:date)
   end
 end

@@ -490,69 +490,124 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
-#  test "supports lists of polymorphic embeds" do
-#    attrs = %{
-#      date: ~U[2020-05-28 02:57:19Z],
-#      text: "This is a reminder with multiple contexts",
-#      channel: %{address: "john@example.com", confirmed: true},
-#      contexts: [
-#        %{
-#          __type__: "device",
-#          id: "asdfghjkjhgfds",
-#          type: "cellphone"
-#        },
-#        %{
-#          __type__: "age",
-#          age: "aquarius"
-#        }
-#      ]
-#    }
-#
-#    %Reminder{}
-#    |> Reminder.changeset(attrs)
-#    |> Repo.insert!()
-#
-#    reminder =
-#      Reminder
-#      |> QueryBuilder.where(text: "This is a reminder with multiple contexts")
-#      |> Repo.one()
-#
-#    assert reminder.contexts |> length() == 2
-#
-#    assert [
-#             %Reminder.Context.Device{
-#               id: "asdfghjkjhgfds",
-#               type: "cellphone"
-#             },
-#             %Reminder.Context.Age{
-#               age: "aquarius"
-#             }
-#           ] = reminder.contexts
-#  end
-#
-#  test "validates lists of polymorphic embeds" do
-#    attrs = %{
-#      date: ~U[2020-05-28 02:57:19Z],
-#      text: "This is a reminder with multiple contexts",
-#      contexts: [
-#        %{
-#          id: "asdfghjkjhgfds",
-#          type: "cellphone"
-#        },
-#        %{
-#          age: "aquarius"
-#        }
-#      ]
-#    }
-#
-#    insert_result =
-#      %Reminder{}
-#      |> Reminder.changeset(attrs)
-#      |> Repo.insert()
-#
-#    assert {:error, %Ecto.Changeset{errors: [contexts: {"is invalid on indexes 0, 1", []}]}} =
-#             insert_result
-#  end
+  test "supports lists of polymorphic embeds" do
+    for polymorphic? <- [false, true] do
+      reminder_module = get_module(Reminder, polymorphic?)
+      device_module = get_module(Reminder.Context.Device, polymorphic?)
+      age_module = get_module(Reminder.Context.Age, polymorphic?)
+      location_module = get_module(Reminder.Context.Location, polymorphic?)
+
+      attrs = %{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is a reminder with multiple contexts #{polymorphic?}",
+        channel: %{
+          __type__: "sms",
+          number: "02/807.05.53",
+          country_code: 1
+        },
+        contexts: [
+          %{
+            __type__: "device",
+            id: "12345",
+            type: "cellphone",
+            address: "address"
+          },
+          %{
+            __type__: "age",
+            age: "aquarius",
+            address: "address"
+          }
+        ]
+      }
+
+      struct(reminder_module)
+      |> reminder_module.changeset(attrs)
+      |> Repo.insert!()
+
+      reminder =
+        reminder_module
+        |> QueryBuilder.where(text: "This is a reminder with multiple contexts #{polymorphic?}")
+        |> Repo.one()
+
+      assert reminder.contexts |> length() == 2
+
+      if polymorphic? do
+        assert [
+                 struct(device_module,
+                   id: "12345",
+                   type: "cellphone"
+                 ),
+                 struct(age_module,
+                   age: "aquarius"
+                 )
+               ] == reminder.contexts
+      else
+        assert [
+                 struct(location_module, address: "address"),
+                 struct(location_module, address: "address")
+               ] == reminder.contexts
+      end
+    end
+  end
+
+  test "validates lists of polymorphic embeds" do
+    for polymorphic? <- [false, true] do
+      reminder_module = get_module(Reminder, polymorphic?)
+
+      attrs = %{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is a reminder with multiple contexts",
+        contexts: [
+          %{
+            id: "12345",
+            type: "cellphone"
+          },
+          %{
+            age: "aquarius"
+          }
+        ]
+      }
+
+      insert_result =
+        struct(reminder_module)
+        |> reminder_module.changeset(attrs)
+        |> Repo.insert()
+
+      if polymorphic? do
+        assert {:error, %Ecto.Changeset{valid?: false, errors: [contexts: {"is invalid", _}]}} = insert_result
+      else
+        assert {:error, %Ecto.Changeset{valid?: false, errors: errors, changes: %{contexts: [%{errors: location_errors} | _]}}} = insert_result
+        assert [] = errors
+        assert %{address: {"can't be blank", [validation: :required]}} = Map.new(location_errors)
+      end
+
+      attrs = %{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is a reminder with multiple contexts",
+        contexts: [
+          %{
+            __type__: "device",
+            id: "12345"
+          },
+          %{
+            __type__: "age",
+            age: "aquarius"
+          }
+        ]
+      }
+
+      insert_result =
+        struct(reminder_module)
+        |> reminder_module.changeset(attrs)
+        |> Repo.insert()
+
+      if polymorphic? do
+        assert {:error, %Ecto.Changeset{valid?: false, errors: errors, changes: %{contexts: [%{errors: device_errors} | _]}}} = insert_result
+        assert [] = errors
+        assert %{type: {"can't be blank", [validation: :required]}} = Map.new(device_errors)
+      end
+    end
+  end
 
   test "inputs_for/4" do
     reminder_module = get_module(Reminder, true)

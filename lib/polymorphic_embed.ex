@@ -6,8 +6,8 @@ defmodule PolymorphicEmbed do
 
   @impl true
   def init(opts) do
-    if Keyword.get(opts, :on_replace) != :update do
-      raise("`:on_replace` option for polymorphic embed must be set to `:update`")
+    if Keyword.get(opts, :on_replace) not in [:update, :delete] do
+      raise("`:on_replace` option for polymorphic embed must be set to `:update` or `:delete`")
     end
 
     metadata =
@@ -38,7 +38,7 @@ defmodule PolymorphicEmbed do
   end
 
   def cast_polymorphic_embed(changeset, field) do
-    %{metadata: metadata, on_type_not_found: on_type_not_found} =
+    %{array?: array?, metadata: metadata, on_type_not_found: on_type_not_found} =
       get_options(changeset.data.__struct__, field)
 
     changeset.params
@@ -50,39 +50,87 @@ defmodule PolymorphicEmbed do
       {:ok, nil} ->
         Ecto.Changeset.put_change(changeset, field, nil)
 
-      {:ok, params_for_field} ->
-        params =
-          Map.fetch!(changeset.data, field)
-          |> case do
-            nil -> %{}
-            struct -> map_from_struct(struct, metadata)
-          end
-          |> Map.merge(params_for_field)
-          |> convert_map_keys_to_string()
+      {:ok, map} when map == %{} and not array? ->
+        changeset
 
+      {:ok, params_for_field} ->
+        cond do
+          array? and is_list(params_for_field) ->
+            cast_polymorphic_embeds_many(changeset, field, params_for_field, metadata, on_type_not_found)
+
+          not array? and is_map(params_for_field) ->
+            cast_polymorphic_embeds_one(changeset, field, params_for_field, metadata, on_type_not_found)
+        end
+    end
+  end
+
+  defp cast_polymorphic_embeds_one(changeset, field, params, metadata, on_type_not_found) do
+    params =
+      Map.fetch!(changeset.data, field)
+      |> case do
+           nil -> %{}
+           struct -> map_from_struct(struct, metadata)
+         end
+      |> Map.merge(params)
+      |> convert_map_keys_to_string()
+
+    case do_get_polymorphic_module(params, metadata) do
+      nil when on_type_not_found == :raise ->
+        raise_cannot_infer_type_from_data(params)
+
+      nil when on_type_not_found == :changeset_error ->
+        Ecto.Changeset.add_error(changeset, field, "is invalid")
+
+      module ->
+        module.changeset(struct(module), params)
+        |> case do
+           %{valid?: true} = embed_changeset ->
+             Ecto.Changeset.put_change(
+               changeset,
+               field,
+               Ecto.Changeset.apply_changes(embed_changeset)
+             )
+
+           %{valid?: false} = embed_changeset ->
+             changeset
+             |> Ecto.Changeset.put_change(field, embed_changeset)
+             |> Map.put(:valid?, false)
+         end
+    end
+  end
+
+  defp cast_polymorphic_embeds_many(changeset, field, list_params, metadata, on_type_not_found) do
+    embeds =
+      Enum.map(list_params, fn params ->
         case do_get_polymorphic_module(params, metadata) do
           nil when on_type_not_found == :raise ->
             raise_cannot_infer_type_from_data(params)
 
           nil when on_type_not_found == :changeset_error ->
-            Ecto.Changeset.add_error(changeset, field, "is invalid")
+           :error
 
           module ->
             module.changeset(struct(module), params)
             |> case do
-              %{valid?: true} = embed_changeset ->
-                Ecto.Changeset.put_change(
-                  changeset,
-                  field,
-                  Ecto.Changeset.apply_changes(embed_changeset)
-                )
+               %{valid?: true} = embed_changeset ->
+                 Ecto.Changeset.apply_changes(embed_changeset)
 
-              %{valid?: false} = embed_changeset ->
-                changeset
-                |> Ecto.Changeset.put_change(field, embed_changeset)
-                |> Map.put(:valid?, false)
-            end
+               %{valid?: false} = embed_changeset ->
+                 embed_changeset
+             end
         end
+      end)
+
+    if Enum.any?(embeds, &(&1 == :error)) do
+      Ecto.Changeset.add_error(changeset, field, "is invalid")
+    else
+      any_invalid? = Enum.any?(embeds, fn
+        %{valid?: false} -> true
+        _ -> false
+      end)
+
+      Ecto.Changeset.put_change(changeset, field, embeds)
+      |> Map.put(:valid?, !any_invalid?)
     end
   end
 
@@ -176,8 +224,9 @@ defmodule PolymorphicEmbed do
       _ in UndefinedFunctionError ->
         raise ArgumentError, "#{inspect(schema)} is not an Ecto schema"
     else
-      {:parameterized, PolymorphicEmbed, options} -> options
-      {_, {:parameterized, PolymorphicEmbed, options}} -> options
+      {:parameterized, PolymorphicEmbed, options} -> Map.put(options, :array?, false)
+      {:array, {:parameterized, PolymorphicEmbed, options}} -> Map.put(options, :array?, true)
+      {_, {:parameterized, PolymorphicEmbed, options}} -> Map.put(options, :array?, false)
       nil -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
     end
   end
