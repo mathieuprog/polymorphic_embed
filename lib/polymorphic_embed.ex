@@ -50,6 +50,9 @@ defmodule PolymorphicEmbed do
       {:ok, nil} ->
         Ecto.Changeset.put_change(changeset, field, nil)
 
+      {:ok, map} when map == %{} ->
+        changeset
+
       {:ok, params_for_field} ->
         params =
           Map.fetch!(changeset.data, field)
