@@ -215,6 +215,31 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  test "required true" do
+    for polymorphic? <- [false, true] do
+      reminder_module = get_module(Reminder, polymorphic?)
+
+      sms_reminder_attrs = %{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is an SMS reminder #{polymorphic?}",
+        channel: %{
+          my_type_field: "sms",
+          number: "02/807.05.53",
+          country_code: 1,
+          attempts: [],
+          provider: nil
+        }
+      }
+
+      insert_result =
+        struct(reminder_module)
+        |> reminder_module.changeset(sms_reminder_attrs)
+        |> Repo.insert()
+
+      assert {:error, %{valid?: false, changes: %{channel: %{valid?: false, errors: [provider: _]}}}} = insert_result
+    end
+  end
+
   test "setting embed to nil" do
     for polymorphic? <- [false, true] do
       reminder_module = get_module(Reminder, polymorphic?)
@@ -503,7 +528,11 @@ defmodule PolymorphicEmbedTest do
         channel: %{
           my_type_field: "sms",
           number: "02/807.05.53",
-          country_code: 1
+          country_code: 1,
+          provider: %{
+            __type__: "twilio",
+            api_key: "foo"
+          }
         },
         contexts: [
           %{

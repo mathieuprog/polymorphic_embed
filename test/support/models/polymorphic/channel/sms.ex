@@ -1,7 +1,7 @@
 defmodule PolymorphicEmbed.Channel.SMS do
   use Ecto.Schema
   import Ecto.Changeset
-  import PolymorphicEmbed, only: [cast_polymorphic_embed: 2]
+  import PolymorphicEmbed, only: [cast_polymorphic_embed: 3]
 
   @primary_key false
 
@@ -27,7 +27,7 @@ defmodule PolymorphicEmbed.Channel.SMS do
     |> cast(attrs, [:number, :country_code])
     |> cast_embed(:result)
     |> cast_embed(:attempts)
-    |> cast_polymorphic_embed(:provider)
+    |> cast_polymorphic_embed(:provider, required: true)
     |> validate_required([:number, :country_code])
   end
 end

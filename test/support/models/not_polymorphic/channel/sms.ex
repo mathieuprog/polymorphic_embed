@@ -19,7 +19,7 @@ defmodule PolymorphicEmbed.Regular.Channel.SMS do
     |> cast(attrs, [:number, :country_code])
     |> cast_embed(:result)
     |> cast_embed(:attempts)
-    |> cast_embed(:provider)
+    |> cast_embed(:provider, required: true)
     |> validate_required([:number, :country_code])
   end
 end

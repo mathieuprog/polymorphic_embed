@@ -36,10 +36,12 @@ defmodule PolymorphicEmbed do
     }
   end
 
-  def cast_polymorphic_embed(changeset, field) do
-    options = get_options(changeset.data.__struct__, field)
+  def cast_polymorphic_embed(changeset, field, cast_options \\ []) do
+    field_options = get_field_options(changeset.data.__struct__, field)
 
-    %{array?: array?, on_replace: on_replace} = options
+    %{array?: array?, on_replace: on_replace} = field_options
+
+    required = Keyword.get(cast_options, :required, false)
 
     if array? and on_replace != :delete do
       raise "`:on_replace` option for field #{inspect field} must be set to `:update`"
@@ -55,7 +57,10 @@ defmodule PolymorphicEmbed do
       :error ->
         changeset
 
-      {:ok, nil} ->
+      {:ok, nil} when required ->
+        Ecto.Changeset.add_error(changeset, field, "is invalid")
+
+      {:ok, nil} when not required ->
         Ecto.Changeset.put_change(changeset, field, nil)
 
       {:ok, map} when map == %{} and not array? ->
@@ -64,16 +69,16 @@ defmodule PolymorphicEmbed do
       {:ok, params_for_field} ->
         cond do
           array? and is_list(params_for_field) ->
-            cast_polymorphic_embeds_many(changeset, field, params_for_field, options)
+            cast_polymorphic_embeds_many(changeset, field, params_for_field, field_options)
 
           not array? and is_map(params_for_field) ->
-            cast_polymorphic_embeds_one(changeset, field, params_for_field, options)
+            cast_polymorphic_embeds_one(changeset, field, params_for_field, field_options)
         end
     end
   end
 
-  defp cast_polymorphic_embeds_one(changeset, field, params, options) do
-    %{types_metadata: types_metadata, on_type_not_found: on_type_not_found, type_field: type_field} = options
+  defp cast_polymorphic_embeds_one(changeset, field, params, field_options) do
+    %{types_metadata: types_metadata, on_type_not_found: on_type_not_found, type_field: type_field} = field_options
 
     params =
       Map.fetch!(changeset.data, field)
@@ -109,8 +114,8 @@ defmodule PolymorphicEmbed do
     end
   end
 
-  defp cast_polymorphic_embeds_many(changeset, field, list_params, options) do
-    %{types_metadata: types_metadata, on_type_not_found: on_type_not_found, type_field: type_field} = options
+  defp cast_polymorphic_embeds_many(changeset, field, list_params, field_options) do
+    %{types_metadata: types_metadata, on_type_not_found: on_type_not_found, type_field: type_field} = field_options
 
     embeds =
       Enum.map(list_params, fn params ->
@@ -186,7 +191,7 @@ defmodule PolymorphicEmbed do
   end
 
   def get_polymorphic_module(schema, field, type_or_data) do
-    %{types_metadata: types_metadata, type_field: type_field} = get_options(schema, field)
+    %{types_metadata: types_metadata, type_field: type_field} = get_field_options(schema, field)
 
     case type_or_data do
       map when is_map(map) -> do_get_polymorphic_module_from_map(map, type_field, types_metadata)
@@ -216,7 +221,7 @@ defmodule PolymorphicEmbed do
   end
 
   def get_polymorphic_type(schema, field, module_or_struct) do
-    %{types_metadata: types_metadata} = get_options(schema, field)
+    %{types_metadata: types_metadata} = get_field_options(schema, field)
     do_get_polymorphic_type(module_or_struct, types_metadata)
   end
 
@@ -238,7 +243,7 @@ defmodule PolymorphicEmbed do
     Enum.find(types_metadata, &(type == &1.type))
   end
 
-  defp get_options(schema, field) do
+  defp get_field_options(schema, field) do
     try do
       schema.__schema__(:type, field)
     rescue
