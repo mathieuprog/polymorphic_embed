@@ -124,6 +124,7 @@ field :contexts, {:array, PolymorphicEmbed},
 ### Options
 
 * `:types` - discussed above.
+* `:type_field` - specify a custom type field. Defaults to `:__type__`.
 * `:on_type_not_found` - specify whether to raise or add a changeset error if the embed's type cannot be inferred.
   Possible values are `:raise` and `:changeset_error`. By default, a changeset error "is invalid" is added.
 * `:on_replace` - mandatory option that can only be set to `:update` for a single embed and `:delete` for a list of
