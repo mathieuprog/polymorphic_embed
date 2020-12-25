@@ -23,7 +23,7 @@ defmodule PolymorphicEmbedTest do
         date: ~U[2020-05-28 02:57:19Z],
         text: "This is an SMS reminder #{polymorphic?}",
         channel: %{
-          __type__: "sms",
+          my_type_field: "sms",
           number: "02/807.05.53",
           country_code: 1,
           result: %{success: true},
@@ -77,7 +77,7 @@ defmodule PolymorphicEmbedTest do
         date: ~U[2020-05-28 02:57:19Z],
         text: "This is an SMS reminder",
         channel: %{
-          __type__: "sms"
+          my_type_field: "sms"
         }
       }
 
@@ -370,7 +370,7 @@ defmodule PolymorphicEmbedTest do
         reminder
         |> reminder_module.changeset(%{
           "channel" => %{
-            "__type__" => "sms",
+            "my_type_field" => "sms",
             "number" => "54"
           }
         })
@@ -432,7 +432,7 @@ defmodule PolymorphicEmbedTest do
       date: ~U[2020-05-28 02:57:19Z],
       text: "This is an SMS reminder",
       channel: %{
-        __type__: "sms",
+        my_type_field: "sms",
         number: "02/807.05.53",
         country_code: 1,
         result: %{success: true},
@@ -479,7 +479,7 @@ defmodule PolymorphicEmbedTest do
 
     Ecto.Adapters.SQL.query!(
       Repo,
-      "UPDATE reminders SET channel = jsonb_set(channel, '{__type__}', '\"foo\"')",
+      "UPDATE reminders SET channel = jsonb_set(channel, '{my_type_field}', '\"foo\"')",
       []
     )
 
@@ -501,7 +501,7 @@ defmodule PolymorphicEmbedTest do
         date: ~U[2020-05-28 02:57:19Z],
         text: "This is a reminder with multiple contexts #{polymorphic?}",
         channel: %{
-          __type__: "sms",
+          my_type_field: "sms",
           number: "02/807.05.53",
           country_code: 1
         },

@@ -16,7 +16,8 @@ defmodule PolymorphicEmbed.Reminder do
           identify_by_fields: [:address, :confirmed]
         ]
       ],
-      on_replace: :update
+      on_replace: :update,
+      type_field: :my_type_field
     )
 
     field(:contexts, {:array, PolymorphicEmbed},

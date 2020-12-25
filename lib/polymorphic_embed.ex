@@ -10,37 +10,36 @@ defmodule PolymorphicEmbed do
       raise("`:on_replace` option for polymorphic embed must be set to `:update` (single embed) or `:delete` (list of embeds)")
     end
 
-    metadata =
+    types_metadata =
       Keyword.fetch!(opts, :types)
       |> Enum.map(fn
         {type_name, type_opts} when is_list(type_opts) ->
-          module = Keyword.fetch!(type_opts, :module)
-          identify_by_fields = Keyword.fetch!(type_opts, :identify_by_fields)
-
-          %{
-            type: type_name |> to_string(),
-            module: module,
-            identify_by_fields: identify_by_fields |> Enum.map(&to_string/1)
-          }
+          {type_name, type_opts}
 
         {type_name, module} ->
+          {type_name, module: module}
+      end)
+      |> Enum.map(fn
+        {type_name, type_opts} when is_list(type_opts) ->
           %{
             type: type_name |> to_string(),
-            module: module,
-            identify_by_fields: []
+            module: Keyword.fetch!(type_opts, :module),
+            identify_by_fields: Keyword.get(type_opts, :identify_by_fields, []) |> Enum.map(&to_string/1)
           }
       end)
 
     %{
-      metadata: metadata,
+      types_metadata: types_metadata,
       on_type_not_found: Keyword.get(opts, :on_type_not_found, :changeset_error),
+      type_field: Keyword.get(opts, :type_field, :__type__) |> to_string(),
       on_replace: Keyword.fetch!(opts, :on_replace)
     }
   end
 
   def cast_polymorphic_embed(changeset, field) do
-    %{array?: array?, metadata: metadata, on_type_not_found: on_type_not_found, on_replace: on_replace} =
-      get_options(changeset.data.__struct__, field)
+    options = get_options(changeset.data.__struct__, field)
+
+    %{array?: array?, on_replace: on_replace} = options
 
     if array? and on_replace != :delete do
       raise "`:on_replace` option for field #{inspect field} must be set to `:update`"
@@ -65,25 +64,27 @@ defmodule PolymorphicEmbed do
       {:ok, params_for_field} ->
         cond do
           array? and is_list(params_for_field) ->
-            cast_polymorphic_embeds_many(changeset, field, params_for_field, metadata, on_type_not_found)
+            cast_polymorphic_embeds_many(changeset, field, params_for_field, options)
 
           not array? and is_map(params_for_field) ->
-            cast_polymorphic_embeds_one(changeset, field, params_for_field, metadata, on_type_not_found)
+            cast_polymorphic_embeds_one(changeset, field, params_for_field, options)
         end
     end
   end
 
-  defp cast_polymorphic_embeds_one(changeset, field, params, metadata, on_type_not_found) do
+  defp cast_polymorphic_embeds_one(changeset, field, params, options) do
+    %{types_metadata: types_metadata, on_type_not_found: on_type_not_found, type_field: type_field} = options
+
     params =
       Map.fetch!(changeset.data, field)
       |> case do
            nil -> %{}
-           struct -> map_from_struct(struct, metadata)
+           struct -> map_from_struct(struct, type_field, types_metadata)
          end
       |> Map.merge(params)
       |> convert_map_keys_to_string()
 
-    case do_get_polymorphic_module(params, metadata) do
+    case do_get_polymorphic_module_from_map(params, type_field, types_metadata) do
       nil when on_type_not_found == :raise ->
         raise_cannot_infer_type_from_data(params)
 
@@ -108,10 +109,12 @@ defmodule PolymorphicEmbed do
     end
   end
 
-  defp cast_polymorphic_embeds_many(changeset, field, list_params, metadata, on_type_not_found) do
+  defp cast_polymorphic_embeds_many(changeset, field, list_params, options) do
+    %{types_metadata: types_metadata, on_type_not_found: on_type_not_found, type_field: type_field} = options
+
     embeds =
       Enum.map(list_params, fn params ->
-        case do_get_polymorphic_module(params, metadata) do
+        case do_get_polymorphic_module_from_map(params, type_field, types_metadata) do
           nil when on_type_not_found == :raise ->
             raise_cannot_infer_type_from_data(params)
 
@@ -156,8 +159,8 @@ defmodule PolymorphicEmbed do
   @impl true
   def load(nil, _loader, _params), do: {:ok, nil}
 
-  def load(data, _loader, %{metadata: metadata}) do
-    case do_get_polymorphic_module(data, metadata) do
+  def load(data, _loader, %{types_metadata: types_metadata, type_field: type_field}) do
+    case do_get_polymorphic_module_from_map(data, type_field, types_metadata) do
       nil -> raise_cannot_infer_type_from_data(data)
       module when is_atom(module) -> {:ok, Ecto.embedded_load(module, data, :json)}
     end
@@ -168,62 +171,71 @@ defmodule PolymorphicEmbed do
     raise "cannot dump invalid changeset"
   end
 
-  def dump(%_module{} = struct, dumper, %{metadata: metadata}) do
-    dumper.(:map, map_from_struct(struct, metadata))
+  def dump(%_module{} = struct, dumper, %{types_metadata: types_metadata, type_field: type_field}) do
+    dumper.(:map, map_from_struct(struct, type_field, types_metadata))
   end
 
   def dump(nil, dumper, _params) do
     dumper.(:map, nil)
   end
 
-  defp map_from_struct(%module{} = struct, metadata) do
+  defp map_from_struct(%module{} = struct, type_field, types_metadata) do
     struct
     |> Ecto.embedded_dump(:json)
-    |> Map.put(:__type__, do_get_polymorphic_type(module, metadata))
+    |> Map.put(type_field, do_get_polymorphic_type(module, types_metadata))
   end
 
   def get_polymorphic_module(schema, field, type_or_data) do
-    %{metadata: metadata} = get_options(schema, field)
-    do_get_polymorphic_module(type_or_data, metadata)
+    %{types_metadata: types_metadata, type_field: type_field} = get_options(schema, field)
+
+    case type_or_data do
+      map when is_map(map) -> do_get_polymorphic_module_from_map(map, type_field, types_metadata)
+      type when is_atom(type) or is_binary(type) -> do_get_polymorphic_module_for_type(type, types_metadata)
+    end
   end
 
-  defp do_get_polymorphic_module(%{:__type__ => type}, metadata),
-    do: do_get_polymorphic_module(type, metadata)
+  defp do_get_polymorphic_module_from_map(%{} = attrs, type_field, types_metadata) do
+    type = Enum.find_value(attrs, fn {key, value} -> to_string(key) == type_field && value end)
 
-  defp do_get_polymorphic_module(%{"__type__" => type}, metadata),
-    do: do_get_polymorphic_module(type, metadata)
-
-  defp do_get_polymorphic_module(%{} = attrs, metadata) do
-    # check if one list is contained in another
-    # Enum.count(contained -- container) == 0
-    # contained -- container == []
-    metadata
-    |> Enum.filter(&([] != &1.identify_by_fields))
-    |> Enum.find(&([] == &1.identify_by_fields -- Map.keys(attrs)))
-    |> (&(&1 && Map.fetch!(&1, :module))).()
+    if type do
+      do_get_polymorphic_module_for_type(type, types_metadata)
+    else
+      # check if one list is contained in another
+      # Enum.count(contained -- container) == 0
+      # contained -- container == []
+      types_metadata
+      |> Enum.filter(&([] != &1.identify_by_fields))
+      |> Enum.find(&([] == &1.identify_by_fields -- Map.keys(attrs)))
+      |> (&(&1 && Map.fetch!(&1, :module))).()
+    end
   end
 
-  defp do_get_polymorphic_module(type, metadata) do
-    type = to_string(type)
-
-    metadata
-    |> Enum.find(&(type == &1.type))
+  defp do_get_polymorphic_module_for_type(type, types_metadata) do
+    get_metadata_for_type(type, types_metadata)
     |> (&(&1 && Map.fetch!(&1, :module))).()
   end
 
   def get_polymorphic_type(schema, field, module_or_struct) do
-    %{metadata: metadata} = get_options(schema, field)
-    do_get_polymorphic_type(module_or_struct, metadata)
+    %{types_metadata: types_metadata} = get_options(schema, field)
+    do_get_polymorphic_type(module_or_struct, types_metadata)
   end
 
-  defp do_get_polymorphic_type(%module{}, metadata),
-    do: do_get_polymorphic_type(module, metadata)
+  defp do_get_polymorphic_type(%module{}, types_metadata),
+    do: do_get_polymorphic_type(module, types_metadata)
 
-  defp do_get_polymorphic_type(module, metadata) do
-    metadata
-    |> Enum.find(&(module == &1.module))
+  defp do_get_polymorphic_type(module, types_metadata) do
+    get_metadata_for_module(module, types_metadata)
     |> Map.fetch!(:type)
     |> String.to_atom()
+  end
+
+  defp get_metadata_for_module(module, types_metadata) do
+    Enum.find(types_metadata, &(module == &1.module))
+  end
+
+  defp get_metadata_for_type(type, types_metadata) do
+    type = to_string(type)
+    Enum.find(types_metadata, &(type == &1.type))
   end
 
   defp get_options(schema, field) do
