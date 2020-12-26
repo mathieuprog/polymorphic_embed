@@ -24,7 +24,7 @@ Find the schema code and explanations below.
 defmodule MyApp.Reminder do
   use Ecto.Schema
   import Ecto.Changeset
-  import PolymorphicEmbed, only: [cast_polymorphic_embed: 2]
+  import PolymorphicEmbed, only: [cast_polymorphic_embed: 3]
 
   schema "reminders" do
     field :date, :utc_datetime
@@ -41,7 +41,7 @@ defmodule MyApp.Reminder do
   def changeset(struct, values) do
     struct
     |> cast(values, [:date, :text])
-    |> cast_polymorphic_embed(:channel)
+    |> cast_polymorphic_embed(:channel, required: true)
     |> validate_required(:date)
   end
 end
@@ -80,6 +80,16 @@ defmodule MyApp.Channel.SMS do
 end
 ```
 
+### `cast_polymorphic_embed/3`
+
+`cast_polymorphic_embed/3` must be called to cast the polymorphic embed's parameters.
+
+#### Options
+
+* `:required` – if the embed is a required field.
+
+### PolymorphicEmbed Ecto type
+
 The `:types` option for the `PolymorphicEmbed` custom type contains a keyword list mapping an atom representing the type
 (in this example `:email` and `:sms`) with the corresponding embedded schema module.
 
@@ -107,7 +117,7 @@ parameter is then no longer required.
 Note that you may still include a `__type__` parameter that will take precedence over this strategy (this could still be
 useful if you need to store incomplete data, which might not allow identifying the type).
 
-### List of polymorphic embeds
+#### List of polymorphic embeds
 
 Lists of polymorphic embeds are also supported:
 
@@ -121,13 +131,13 @@ field :contexts, {:array, PolymorphicEmbed},
   on_replace: :delete
 ```
 
-### Options
+#### Options
 
-* `:types` - discussed above.
-* `:type_field` - specify a custom type field. Defaults to `:__type__`.
-* `:on_type_not_found` - specify whether to raise or add a changeset error if the embed's type cannot be inferred.
+* `:types` – discussed above.
+* `:type_field` – specify a custom type field. Defaults to `:__type__`.
+* `:on_type_not_found` – specify whether to raise or add a changeset error if the embed's type cannot be inferred.
   Possible values are `:raise` and `:changeset_error`. By default, a changeset error "is invalid" is added.
-* `:on_replace` - mandatory option that can only be set to `:update` for a single embed and `:delete` for a list of
+* `:on_replace` – mandatory option that can only be set to `:update` for a single embed and `:delete` for a list of
   embeds (we force a value as the default value of this option for `embeds_one` and `embeds_many` is `:raise`).
 
 ### Displaying form inputs and errors in Phoenix templates
