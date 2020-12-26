@@ -35,6 +35,7 @@ defmodule MyApp.Reminder do
         sms: MyApp.Channel.SMS,
         email: [module: MyApp.Channel.Email, identify_by_fields: [:address, :confirmed]]
       ],
+      on_type_not_found: :raise,
       on_replace: :update
   end
 
@@ -128,6 +129,7 @@ field :contexts, {:array, PolymorphicEmbed},
     age: MyApp.Context.Age,
     device: MyApp.Context.Device
   ],
+  on_type_not_found: :raise,
   on_replace: :delete
 ```
 
