@@ -70,7 +70,6 @@ defmodule PolymorphicEmbedTest do
 
   test "invalid values" do
     for polymorphic? <- [false, true] do
-
       reminder_module = get_module(Reminder, polymorphic?)
 
       sms_reminder_attrs = %{
@@ -88,7 +87,11 @@ defmodule PolymorphicEmbedTest do
 
       assert {:error, %Ecto.Changeset{valid?: false, errors: errors, changes: %{channel: %{valid?: false, errors: channel_errors}}}} = insert_result
       assert [] = errors
-      assert %{number: {"can't be blank", [validation: :required]}} = Map.new(channel_errors)
+      assert %{
+               number: {"can't be blank", [validation: :required]},
+               country_code: {"can't be blank", [validation: :required]},
+               provider: {"can't be blank", [validation: :required]}
+             } = Map.new(channel_errors)
     end
   end
 
@@ -236,7 +239,17 @@ defmodule PolymorphicEmbedTest do
         |> reminder_module.changeset(sms_reminder_attrs)
         |> Repo.insert()
 
-      assert {:error, %{valid?: false, changes: %{channel: %{valid?: false, errors: [provider: _]}}}} = insert_result
+      assert {:error,
+        %{
+          valid?: false,
+          changes: %{
+            channel: %{
+              valid?: false,
+              errors: [provider: {"can't be blank", [validation: :required]}]
+            }
+          }
+        }
+      } = insert_result
     end
   end
 

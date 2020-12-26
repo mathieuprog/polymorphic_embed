@@ -54,11 +54,14 @@ defmodule PolymorphicEmbed do
     changeset.params
     |> Map.fetch(to_string(field))
     |> case do
-      :error ->
+      :error when required ->
+        Ecto.Changeset.add_error(changeset, field, "can't be blank", validation: :required)
+
+      :error when not required ->
         changeset
 
       {:ok, nil} when required ->
-        Ecto.Changeset.add_error(changeset, field, "is invalid")
+        Ecto.Changeset.add_error(changeset, field, "can't be blank", validation: :required)
 
       {:ok, nil} when not required ->
         Ecto.Changeset.put_change(changeset, field, nil)
