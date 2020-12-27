@@ -41,8 +41,6 @@ defmodule PolymorphicEmbed do
 
     %{array?: array?, on_replace: on_replace} = field_options
 
-    required = Keyword.get(cast_options, :required, false)
-
     if array? and on_replace != :delete do
       raise "`:on_replace` option for field #{inspect field} must be set to `:update`"
     end
@@ -51,11 +49,17 @@ defmodule PolymorphicEmbed do
       raise "`:on_replace` option for field #{inspect field} must be set to `:delete`"
     end
 
+    required = Keyword.get(cast_options, :required, false)
+
     changeset.params
     |> Map.fetch(to_string(field))
     |> case do
       :error when required ->
-        Ecto.Changeset.add_error(changeset, field, "can't be blank", validation: :required)
+        if Map.fetch!(changeset.data, field) do
+          changeset
+        else
+          Ecto.Changeset.add_error(changeset, field, "can't be blank", validation: :required)
+        end
 
       :error when not required ->
         changeset
@@ -83,8 +87,10 @@ defmodule PolymorphicEmbed do
   defp cast_polymorphic_embeds_one(changeset, field, params, field_options) do
     %{types_metadata: types_metadata, on_type_not_found: on_type_not_found, type_field: type_field} = field_options
 
-    params =
-      Map.fetch!(changeset.data, field)
+    data_for_field = Map.fetch!(changeset.data, field)
+
+    merged_params_with_data =
+      data_for_field
       |> case do
            nil -> %{}
            struct -> map_from_struct(struct, type_field, types_metadata)
@@ -92,16 +98,19 @@ defmodule PolymorphicEmbed do
       |> Map.merge(params)
       |> convert_map_keys_to_string()
 
-    case do_get_polymorphic_module_from_map(params, type_field, types_metadata) do
+    case do_get_polymorphic_module_from_map(merged_params_with_data, type_field, types_metadata) do
       nil when on_type_not_found == :raise ->
-        raise_cannot_infer_type_from_data(params)
+        raise_cannot_infer_type_from_data(merged_params_with_data)
 
       nil when on_type_not_found == :changeset_error ->
         Ecto.Changeset.add_error(changeset, field, "is invalid")
 
       module ->
-        module.changeset(struct(module), params)
-        |> case do
+        embed_changeset = module.changeset(data_for_field || struct(module), params)
+
+        embed_changeset = %{embed_changeset | action: if(data_for_field, do: :update, else: :insert)}
+
+        case embed_changeset do
            %{valid?: true} = embed_changeset ->
              Ecto.Changeset.put_change(
                changeset,
@@ -130,8 +139,11 @@ defmodule PolymorphicEmbed do
            :error
 
           module ->
-            module.changeset(struct(module), params)
-            |> case do
+            embed_changeset = module.changeset(struct(module), params)
+
+            embed_changeset = %{embed_changeset | action: :insert}
+
+            case embed_changeset do
                %{valid?: true} = embed_changeset ->
                  Ecto.Changeset.apply_changes(embed_changeset)
 
@@ -183,9 +195,7 @@ defmodule PolymorphicEmbed do
     dumper.(:map, map_from_struct(struct, type_field, types_metadata))
   end
 
-  def dump(nil, dumper, _params) do
-    dumper.(:map, nil)
-  end
+  def dump(nil, dumper, _params), do: dumper.(:map, nil)
 
   defp map_from_struct(%module{} = struct, type_field, types_metadata) do
     struct

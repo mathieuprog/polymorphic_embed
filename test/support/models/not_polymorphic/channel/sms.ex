@@ -8,7 +8,7 @@ defmodule PolymorphicEmbed.Regular.Channel.SMS do
     field(:number, :string)
     field(:country_code, :integer)
 
-    embeds_one(:provider, PolymorphicEmbed.Regular.Channel.TwilioSMSProvider)
+    embeds_one(:provider, PolymorphicEmbed.Regular.Channel.TwilioSMSProvider, on_replace: :update)
 
     embeds_one(:result, PolymorphicEmbed.Regular.Channel.SMSResult)
     embeds_many(:attempts, PolymorphicEmbed.Regular.Channel.SMSAttempts)
