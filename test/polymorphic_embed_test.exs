@@ -561,6 +561,57 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  test "changing type" do
+    reminder_module = get_module(Reminder, true)
+    sms_module = get_module(Channel.SMS, true)
+
+    attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an Email reminder",
+      channel: %{
+        address: "john@example.com",
+        valid: true,
+        confirmed: false
+      }
+    }
+
+    insert_result =
+      struct(reminder_module)
+      |> reminder_module.changeset(attrs)
+      |> Repo.insert()
+
+    assert {:ok, %reminder_module{} = reminder} = insert_result
+
+    update_attrs = %{
+      date: ~U[2020-05-29 02:57:19Z],
+      text: "This is an SMS reminder",
+      channel: %{
+        my_type_field: "sms",
+        number: "02/807.05.53",
+        country_code: 1,
+        attempts: [],
+        provider: %{
+          __type__: "twilio",
+          api_key: "foo"
+        }
+      }
+    }
+
+    update_result =
+      reminder
+      |> reminder_module.changeset(update_attrs)
+      |> Repo.update()
+
+    assert {:ok, %reminder_module{} = updated_reminder} = update_result
+
+    reminder =
+      reminder_module
+      |> QueryBuilder.where(text: "This is an SMS reminder")
+      |> Repo.one()
+
+    assert sms_module == reminder.channel.__struct__
+  end
+
   test "supports lists of polymorphic embeds" do
     for polymorphic? <- [false, true] do
       reminder_module = get_module(Reminder, polymorphic?)
