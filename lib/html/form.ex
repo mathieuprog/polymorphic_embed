@@ -70,6 +70,7 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
 
     defp do_get_errors(nil), do: []
     defp do_get_errors(%{errors: errors}), do: errors
+    defp do_get_errors(_schema), do: []
 
     defp get_data(changeset, field, type) do
       struct = Ecto.Changeset.apply_changes(changeset)

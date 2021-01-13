@@ -880,7 +880,7 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
-  test "inputs_for/4 after insert" do
+  test "inputs_for/4 after invalid insert" do
     for polymorphic? <- [false, true] do
       reminder_module = get_module(Reminder, polymorphic?)
 
@@ -941,6 +941,41 @@ defmodule PolymorphicEmbedTest do
         )
 
       assert contents == expected_contents
+    end
+  end
+
+  test "inputs_for/4 after invalid insert with valid nested struct" do
+    for polymorphic? <- [false, true] do
+      reminder_module = get_module(Reminder, polymorphic?)
+
+      attrs = %{
+        text: "This is an SMS reminder",
+        channel: %{
+          my_type_field: "sms",
+          number: "02/807.05.53",
+          country_code: 1,
+          provider: %{
+            __type__: "twilio",
+            api_key: "foo"
+          }
+        }
+      }
+
+      {:error, changeset} =
+        struct(reminder_module)
+        |> reminder_module.changeset(attrs)
+        |> Repo.insert()
+
+      assert match?(
+               content when is_binary(content),
+               safe_inputs_for(changeset, :channel, :sms, polymorphic?, fn f ->
+                 assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+
+                 assert %{} = Map.new(f.errors)
+
+                 text_input(f, :number)
+               end)
+             )
     end
   end
 
