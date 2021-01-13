@@ -7,7 +7,9 @@ defmodule PolymorphicEmbed do
   @impl true
   def init(opts) do
     if Keyword.get(opts, :on_replace) not in [:update, :delete] do
-      raise("`:on_replace` option for polymorphic embed must be set to `:update` (single embed) or `:delete` (list of embeds)")
+      raise(
+        "`:on_replace` option for polymorphic embed must be set to `:update` (single embed) or `:delete` (list of embeds)"
+      )
     end
 
     types_metadata =
@@ -24,7 +26,8 @@ defmodule PolymorphicEmbed do
           %{
             type: type_name |> to_string(),
             module: Keyword.fetch!(type_opts, :module),
-            identify_by_fields: Keyword.get(type_opts, :identify_by_fields, []) |> Enum.map(&to_string/1)
+            identify_by_fields:
+              Keyword.get(type_opts, :identify_by_fields, []) |> Enum.map(&to_string/1)
           }
       end)
 
@@ -42,11 +45,11 @@ defmodule PolymorphicEmbed do
     %{array?: array?, on_replace: on_replace} = field_options
 
     if array? and on_replace != :delete do
-      raise "`:on_replace` option for field #{inspect field} must be set to `:update`"
+      raise "`:on_replace` option for field #{inspect(field)} must be set to `:update`"
     end
 
     if not array? and on_replace != :update do
-      raise "`:on_replace` option for field #{inspect field} must be set to `:delete`"
+      raise "`:on_replace` option for field #{inspect(field)} must be set to `:delete`"
     end
 
     required = Keyword.get(cast_options, :required, false)
@@ -85,13 +88,17 @@ defmodule PolymorphicEmbed do
   end
 
   defp cast_polymorphic_embeds_one(changeset, field, params, field_options) do
-    %{types_metadata: types_metadata, on_type_not_found: on_type_not_found, type_field: type_field} = field_options
+    %{
+      types_metadata: types_metadata,
+      on_type_not_found: on_type_not_found,
+      type_field: type_field
+    } = field_options
 
     data_for_field = Map.fetch!(changeset.data, field)
 
+    # We support partial update of the embed. If the type cannot be inferred from the parameters, or if the found type
+    # hasn't changed, pass the data to the changeset.
     struct =
-      # We support partial update of the embed. If the type cannot be inferred from the parameters, or if the found type
-      # hasn't changed, pass the data to the changeset.
       case do_get_polymorphic_module_from_map(params, type_field, types_metadata) do
         nil ->
           if data_for_field do
@@ -121,26 +128,33 @@ defmodule PolymorphicEmbed do
       struct ->
         embed_changeset = struct.__struct__.changeset(struct, params)
 
-        embed_changeset = %{embed_changeset | action: if(data_for_field, do: :update, else: :insert)}
+        embed_changeset = %{
+          embed_changeset
+          | action: if(data_for_field, do: :update, else: :insert)
+        }
 
         case embed_changeset do
-           %{valid?: true} = embed_changeset ->
-             Ecto.Changeset.put_change(
-               changeset,
-               field,
-               Ecto.Changeset.apply_changes(embed_changeset)
-             )
+          %{valid?: true} = embed_changeset ->
+            Ecto.Changeset.put_change(
+              changeset,
+              field,
+              Ecto.Changeset.apply_changes(embed_changeset)
+            )
 
-           %{valid?: false} = embed_changeset ->
-             changeset
-             |> Ecto.Changeset.put_change(field, embed_changeset)
-             |> Map.put(:valid?, false)
-         end
+          %{valid?: false} = embed_changeset ->
+            changeset
+            |> Ecto.Changeset.put_change(field, embed_changeset)
+            |> Map.put(:valid?, false)
+        end
     end
   end
 
   defp cast_polymorphic_embeds_many(changeset, field, list_params, field_options) do
-    %{types_metadata: types_metadata, on_type_not_found: on_type_not_found, type_field: type_field} = field_options
+    %{
+      types_metadata: types_metadata,
+      on_type_not_found: on_type_not_found,
+      type_field: type_field
+    } = field_options
 
     embeds =
       Enum.map(list_params, fn params ->
@@ -149,7 +163,7 @@ defmodule PolymorphicEmbed do
             raise_cannot_infer_type_from_data(params)
 
           nil when on_type_not_found == :changeset_error ->
-           :error
+            :error
 
           module ->
             embed_changeset = module.changeset(struct(module), params)
@@ -157,22 +171,23 @@ defmodule PolymorphicEmbed do
             embed_changeset = %{embed_changeset | action: :insert}
 
             case embed_changeset do
-               %{valid?: true} = embed_changeset ->
-                 Ecto.Changeset.apply_changes(embed_changeset)
+              %{valid?: true} = embed_changeset ->
+                Ecto.Changeset.apply_changes(embed_changeset)
 
-               %{valid?: false} = embed_changeset ->
-                 embed_changeset
-             end
+              %{valid?: false} = embed_changeset ->
+                embed_changeset
+            end
         end
       end)
 
     if Enum.any?(embeds, &(&1 == :error)) do
       Ecto.Changeset.add_error(changeset, field, "is invalid")
     else
-      any_invalid? = Enum.any?(embeds, fn
-        %{valid?: false} -> true
-        _ -> false
-      end)
+      any_invalid? =
+        Enum.any?(embeds, fn
+          %{valid?: false} -> true
+          _ -> false
+        end)
 
       Ecto.Changeset.put_change(changeset, field, embeds)
       |> Map.put(:valid?, !any_invalid?)
@@ -223,8 +238,11 @@ defmodule PolymorphicEmbed do
     %{types_metadata: types_metadata, type_field: type_field} = get_field_options(schema, field)
 
     case type_or_data do
-      map when is_map(map) -> do_get_polymorphic_module_from_map(map, type_field, types_metadata)
-      type when is_atom(type) or is_binary(type) -> do_get_polymorphic_module_for_type(type, types_metadata)
+      map when is_map(map) ->
+        do_get_polymorphic_module_from_map(map, type_field, types_metadata)
+
+      type when is_atom(type) or is_binary(type) ->
+        do_get_polymorphic_module_for_type(type, types_metadata)
     end
   end
 

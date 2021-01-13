@@ -62,6 +62,7 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
 
     defp get_errors(%{action: nil}, _field), do: []
     defp get_errors(%{action: :ignore}, _field), do: []
+
     defp get_errors(changeset, field) do
       Ecto.Changeset.get_change(changeset, field)
       |> do_get_errors()
