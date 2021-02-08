@@ -72,7 +72,12 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
     defp do_get_errors(%Ecto.Changeset{errors: root_errors, changes: changes}) do
       Enum.reduce(changes, root_errors, fn
         {key, value}, errors when is_map(value) ->
-          Keyword.put(errors, key, do_get_errors(value))
+          embed_errors = do_get_errors(value)
+          if embed_errors != [] do
+            Keyword.put(errors, key, embed_errors)
+          else
+            errors
+          end
         _, errors ->
           errors
       end)
