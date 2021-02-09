@@ -54,6 +54,8 @@ defmodule PolymorphicEmbed do
 
     required = Keyword.get(cast_options, :required, false)
 
+    changeset_function_name = Keyword.get(cast_options, :changeset_function_name, :changeset)
+
     changeset.params
     |> Map.fetch(to_string(field))
     |> case do
@@ -79,15 +81,15 @@ defmodule PolymorphicEmbed do
       {:ok, params_for_field} ->
         cond do
           array? and is_list(params_for_field) ->
-            cast_polymorphic_embeds_many(changeset, field, params_for_field, field_options)
+            cast_polymorphic_embeds_many(changeset, field, params_for_field, field_options, changeset_function_name)
 
           not array? and is_map(params_for_field) ->
-            cast_polymorphic_embeds_one(changeset, field, params_for_field, field_options)
+            cast_polymorphic_embeds_one(changeset, field, params_for_field, field_options, changeset_function_name)
         end
     end
   end
 
-  defp cast_polymorphic_embeds_one(changeset, field, params, field_options) do
+  defp cast_polymorphic_embeds_one(changeset, field, params, field_options, changeset_function_name) do
     %{
       types_metadata: types_metadata,
       on_type_not_found: on_type_not_found,
@@ -126,7 +128,7 @@ defmodule PolymorphicEmbed do
         Ecto.Changeset.add_error(changeset, field, "is invalid")
 
       struct ->
-        embed_changeset = struct.__struct__.changeset(struct, params)
+        embed_changeset = apply(struct.__struct__, changeset_function_name, [struct, params])
 
         embed_changeset = %{
           embed_changeset
@@ -149,7 +151,7 @@ defmodule PolymorphicEmbed do
     end
   end
 
-  defp cast_polymorphic_embeds_many(changeset, field, list_params, field_options) do
+  defp cast_polymorphic_embeds_many(changeset, field, list_params, field_options, changeset_function_name) do
     %{
       types_metadata: types_metadata,
       on_type_not_found: on_type_not_found,
@@ -166,7 +168,7 @@ defmodule PolymorphicEmbed do
             :error
 
           module ->
-            embed_changeset = module.changeset(struct(module), params)
+            embed_changeset = apply(module, changeset_function_name, [struct(module), params])
 
             embed_changeset = %{embed_changeset | action: :insert}
 
