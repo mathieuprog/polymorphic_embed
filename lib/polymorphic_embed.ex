@@ -79,20 +79,34 @@ defmodule PolymorphicEmbed do
       {:ok, params_for_field} ->
         cond do
           array? and is_list(params_for_field) ->
-            cast_polymorphic_embeds_many(changeset, field, params_for_field, field_options)
+            cast_polymorphic_embeds_many(
+              changeset,
+              field,
+              params_for_field,
+              field_options,
+              cast_options
+            )
 
           not array? and is_map(params_for_field) ->
-            cast_polymorphic_embeds_one(changeset, field, params_for_field, field_options)
+            cast_polymorphic_embeds_one(
+              changeset,
+              field,
+              params_for_field,
+              field_options,
+              cast_options
+            )
         end
     end
   end
 
-  defp cast_polymorphic_embeds_one(changeset, field, params, field_options) do
+  defp cast_polymorphic_embeds_one(changeset, field, params, field_options, cast_options) do
     %{
       types_metadata: types_metadata,
       on_type_not_found: on_type_not_found,
       type_field: type_field
     } = field_options
+
+    changeset_fn = Keyword.get(cast_options, :with, :changeset)
 
     data_for_field = Map.fetch!(changeset.data, field)
 
@@ -126,7 +140,7 @@ defmodule PolymorphicEmbed do
         Ecto.Changeset.add_error(changeset, field, "is invalid")
 
       struct ->
-        embed_changeset = struct.__struct__.changeset(struct, params)
+        embed_changeset = apply(struct.__struct__, changeset_fn, [struct, params])
 
         embed_changeset = %{
           embed_changeset
@@ -149,12 +163,14 @@ defmodule PolymorphicEmbed do
     end
   end
 
-  defp cast_polymorphic_embeds_many(changeset, field, list_params, field_options) do
+  defp cast_polymorphic_embeds_many(changeset, field, list_params, field_options, cast_options) do
     %{
       types_metadata: types_metadata,
       on_type_not_found: on_type_not_found,
       type_field: type_field
     } = field_options
+
+    changeset_fn = Keyword.get(cast_options, :with, :changeset)
 
     embeds =
       Enum.map(list_params, fn params ->
@@ -166,7 +182,7 @@ defmodule PolymorphicEmbed do
             :error
 
           module ->
-            embed_changeset = module.changeset(struct(module), params)
+            embed_changeset = apply(module, changeset_fn, [struct(module), params])
 
             embed_changeset = %{embed_changeset | action: :insert}
 
