@@ -35,7 +35,8 @@ defmodule PolymorphicEmbed do
       types_metadata: types_metadata,
       on_type_not_found: Keyword.get(opts, :on_type_not_found, :changeset_error),
       type_field: Keyword.get(opts, :type_field, :__type__) |> to_string(),
-      on_replace: Keyword.fetch!(opts, :on_replace)
+      on_replace: Keyword.fetch!(opts, :on_replace),
+      on_cast: Keyword.get(opts, :on_cast, :raise)
     }
   end
 
@@ -195,11 +196,15 @@ defmodule PolymorphicEmbed do
   end
 
   @impl true
-  def cast(_data, _params),
-    do:
+  def cast(data, %{on_cast: on_cast}) do
+    if on_cast == :continue do
+      {:ok, data}
+    else
       raise(
         "#{__MODULE__} must not be casted using Ecto.Changeset.cast/4, use #{__MODULE__}.cast_polymorphic_embed/2 instead."
       )
+    end
+  end
 
   @impl true
   def embed_as(_format, _params), do: :dump
