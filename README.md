@@ -89,6 +89,17 @@ end
 
 * `:required` – if the embed is a required field.
 
+* `:with` – allows you to specify a custom changeset. Either pass an MFA or a function:
+```elixir
+changeset
+|> cast_polymorphic_embed(:channel,
+  with: [
+    sms: {SMS, :custom_changeset, ["hello"]},
+    email: &Email.custom_changeset/2
+  ]
+)
+```
+
 ### PolymorphicEmbed Ecto type
 
 The `:types` option for the `PolymorphicEmbed` custom type contains a keyword list mapping an atom representing the type
