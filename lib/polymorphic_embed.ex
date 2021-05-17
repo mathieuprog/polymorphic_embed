@@ -22,7 +22,7 @@ defmodule PolymorphicEmbed do
           {type_name, module: module}
       end)
       |> Enum.map(fn
-        {type_name, type_opts} when is_list(type_opts) ->
+        {type_name, type_opts} ->
           %{
             type: type_name |> to_string(),
             module: Keyword.fetch!(type_opts, :module),
@@ -45,11 +45,11 @@ defmodule PolymorphicEmbed do
     %{array?: array?, on_replace: on_replace, types_metadata: types_metadata} = field_options
 
     if array? and on_replace != :delete do
-      raise "`:on_replace` option for field #{inspect(field)} must be set to `:update`"
+      raise "`:on_replace` option for field #{inspect(field)} must be set to `:delete`"
     end
 
     if not array? and on_replace != :update do
-      raise "`:on_replace` option for field #{inspect(field)} must be set to `:delete`"
+      raise "`:on_replace` option for field #{inspect(field)} must be set to `:update`"
     end
 
     required = Keyword.get(cast_options, :required, false)
