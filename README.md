@@ -122,7 +122,7 @@ useful if you need to store incomplete data, which might not allow identifying t
 
 Lists of polymorphic embeds are also supported:
 
-```
+```elixir
 field :contexts, {:array, PolymorphicEmbed},
   types: [
     location: MyApp.Context.Location,
@@ -182,7 +182,7 @@ Here is an example form using the imported function:
 Sometimes you need to serialize the polymorphic embed and, once in the front-end, need to distinguish them.
 `get_polymorphic_type/3` returns the type of the polymorphic embed:
 
-```
+```elixir
 PolymorphicEmbed.get_polymorphic_type(Reminder, :channel, SMS) == :sms
 ```
 
@@ -202,7 +202,7 @@ Add `polymorphic_embed` for Elixir as a dependency in your `mix.exs` file:
 ```elixir
 def deps do
   [
-    {:polymorphic_embed, "~> 1.3.0"}
+    {:polymorphic_embed, "~> 1.3.4"}
   ]
 end
 ```
