@@ -55,25 +55,24 @@ defmodule PolymorphicEmbed do
     required = Keyword.get(cast_options, :required, false)
     with = Keyword.get(cast_options, :with, nil)
 
-    changeset_fun =
-      fn
-        struct, params when is_nil(with) ->
-          struct.__struct__.changeset(struct, params)
+    changeset_fun = fn
+      struct, params when is_nil(with) ->
+        struct.__struct__.changeset(struct, params)
 
-        struct, params when is_list(with) ->
-          type = do_get_polymorphic_type(struct, types_metadata)
+      struct, params when is_list(with) ->
+        type = do_get_polymorphic_type(struct, types_metadata)
 
-          case Keyword.get(with, type) do
-            {module, function_name, args} ->
-              apply(module, function_name, [struct, params | args])
+        case Keyword.get(with, type) do
+          {module, function_name, args} ->
+            apply(module, function_name, [struct, params | args])
 
-            nil ->
-              struct.__struct__.changeset(struct, params)
+          nil ->
+            struct.__struct__.changeset(struct, params)
 
-            fun ->
-              apply(fun, [struct, params])
-          end
-      end
+          fun ->
+            apply(fun, [struct, params])
+        end
+    end
 
     changeset.params
     |> Map.fetch(to_string(field))
@@ -100,10 +99,22 @@ defmodule PolymorphicEmbed do
       {:ok, params_for_field} ->
         cond do
           array? and is_list(params_for_field) ->
-            cast_polymorphic_embeds_many(changeset, field, changeset_fun, params_for_field, field_options)
+            cast_polymorphic_embeds_many(
+              changeset,
+              field,
+              changeset_fun,
+              params_for_field,
+              field_options
+            )
 
           not array? and is_map(params_for_field) ->
-            cast_polymorphic_embeds_one(changeset, field, changeset_fun, params_for_field, field_options)
+            cast_polymorphic_embeds_one(
+              changeset,
+              field,
+              changeset_fun,
+              params_for_field,
+              field_options
+            )
         end
     end
   end
@@ -147,7 +158,7 @@ defmodule PolymorphicEmbed do
         Ecto.Changeset.add_error(changeset, field, "is invalid")
 
       struct ->
-      	embed_changeset = changeset_fun.(struct, params)
+        embed_changeset = changeset_fun.(struct, params)
 
         embed_changeset = %{
           embed_changeset

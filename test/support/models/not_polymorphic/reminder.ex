@@ -25,7 +25,9 @@ defmodule PolymorphicEmbed.Regular.Reminder do
   def custom_changeset(struct, values) do
     struct
     |> cast(values, [:date, :text])
-    |> cast_embed(:channel, with: {PolymorphicEmbed.Regular.Channel.SMS, :custom_changeset, ["foo", "bar"]})
+    |> cast_embed(:channel,
+      with: {PolymorphicEmbed.Regular.Channel.SMS, :custom_changeset, ["foo", "bar"]}
+    )
     |> validate_required(:date)
   end
 
