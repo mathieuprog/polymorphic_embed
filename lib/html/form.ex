@@ -62,20 +62,15 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
 
     defp get_errors(%{action: nil}, _field), do: []
     defp get_errors(%{action: :ignore}, _field), do: []
-    defp get_errors(%{errors: []}, _field), do: []
 
-    defp get_errors(%{errors: errors}, field) do
-      Keyword.get(errors, field)
+    defp get_errors(changeset, field) do
+      Ecto.Changeset.get_change(changeset, field)
       |> do_get_errors()
     end
 
     defp do_get_errors(nil), do: []
-
-    defp do_get_errors({_, errors}) do
-      errors
-      |> Keyword.delete(:type)
-      |> Keyword.delete(:validation)
-    end
+    defp do_get_errors(%{errors: errors}), do: errors
+    defp do_get_errors(_schema), do: []
 
     defp get_data(changeset, field, type) do
       struct = Ecto.Changeset.apply_changes(changeset)

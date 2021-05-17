@@ -2,7 +2,7 @@ defmodule PolymorphicEmbed.Reminder do
   use Ecto.Schema
   use QueryBuilder
   import Ecto.Changeset
-  import PolymorphicEmbed, only: [cast_polymorphic_embed: 2]
+  import PolymorphicEmbed, only: [cast_polymorphic_embed: 2, cast_polymorphic_embed: 3]
 
   schema "reminders" do
     field(:date, :utc_datetime)
@@ -37,6 +37,34 @@ defmodule PolymorphicEmbed.Reminder do
     |> cast(values, [:date, :text])
     |> cast_polymorphic_embed(:channel)
     |> cast_polymorphic_embed(:contexts)
+    |> validate_required(:date)
+  end
+
+  def custom_changeset(struct, values) do
+    struct
+    |> cast(values, [:date, :text])
+    |> cast_polymorphic_embed(:channel, with: [
+      sms: {PolymorphicEmbed.Channel.SMS, :custom_changeset, ["foo", "bar"]},
+      email: {PolymorphicEmbed.Channel.Email, :custom_changeset, ["foo", "bar"]}
+    ])
+    |> validate_required(:date)
+  end
+
+  def custom_changeset2(struct, values) do
+    struct
+    |> cast(values, [:date, :text])
+    |> cast_polymorphic_embed(:channel, with: [
+      sms: &PolymorphicEmbed.Channel.SMS.custom_changeset2/2,
+    ])
+    |> validate_required(:date)
+  end
+
+  def custom_changeset3(struct, values) do
+    struct
+    |> cast(values, [:date, :text])
+    |> cast_polymorphic_embed(:channel, with: [
+      sms: &PolymorphicEmbed.Channel.SMS.custom_changeset2/2
+    ])
     |> validate_required(:date)
   end
 end

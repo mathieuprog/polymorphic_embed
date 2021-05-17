@@ -8,7 +8,9 @@ defmodule PolymorphicEmbed.Regular.Channel.SMS do
     field(:number, :string)
     field(:country_code, :integer)
 
-    embeds_one(:provider, PolymorphicEmbed.Regular.Channel.TwilioSMSProvider)
+    field(:custom, :boolean, default: false)
+
+    embeds_one(:provider, PolymorphicEmbed.Regular.Channel.TwilioSMSProvider, on_replace: :update)
 
     embeds_one(:result, PolymorphicEmbed.Regular.Channel.SMSResult)
     embeds_many(:attempts, PolymorphicEmbed.Regular.Channel.SMSAttempts)
@@ -21,5 +23,17 @@ defmodule PolymorphicEmbed.Regular.Channel.SMS do
     |> cast_embed(:attempts)
     |> cast_embed(:provider, required: true)
     |> validate_required([:number, :country_code])
+  end
+
+  def custom_changeset(struct, attrs, _foo, _bar) do
+    struct
+    |> changeset(attrs)
+    |> cast(attrs, [:custom])
+  end
+
+  def custom_changeset2(struct, attrs) do
+    struct
+    |> changeset(attrs)
+    |> cast(attrs, [:custom])
   end
 end

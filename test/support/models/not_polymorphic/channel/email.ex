@@ -16,4 +16,6 @@ defmodule PolymorphicEmbed.Regular.Channel.Email do
     |> validate_required(:address)
     |> validate_length(:address, min: 3)
   end
+
+  defdelegate custom_changeset(email, params), to: __MODULE__, as: :changeset
 end
