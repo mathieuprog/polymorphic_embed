@@ -323,7 +323,7 @@ defmodule PolymorphicEmbed do
       {:parameterized, PolymorphicEmbed, options} -> Map.put(options, :array?, false)
       {:array, {:parameterized, PolymorphicEmbed, options}} -> Map.put(options, :array?, true)
       {_, {:parameterized, PolymorphicEmbed, options}} -> Map.put(options, :array?, false)
-      nil -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
+      nil -> raise ArgumentError, "#{field} is not a polymorphic embed"
     end
   end
 
