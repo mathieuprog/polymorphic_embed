@@ -1287,26 +1287,35 @@ defmodule PolymorphicEmbedTest do
       safe_form_for(changeset, fn f ->
         assert f.errors == [date: {"can't be blank", [validation: :required]}]
 
-        safe_inputs_for(changeset, :channel, :sms, polymorphic?, fn f ->
-          assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
-          assert f.errors == []
-
-          1
-        end)
-
-        safe_inputs_for(changeset, :contexts, :location, polymorphic?, fn f ->
-          assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
-          assert f.errors == []
-
-          safe_inputs_for(f.source, :country, nil, false, fn f ->
+        contents =
+          safe_inputs_for(changeset, :channel, :sms, polymorphic?, fn f ->
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
             assert f.errors == []
 
-            1
+            "from safe_inputs_for"
           end)
 
-          1
-        end)
+        assert contents == "from safe_inputs_for"
+
+        contents =
+          safe_inputs_for(changeset, :contexts, :location, polymorphic?, fn f ->
+            assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+            assert f.errors == []
+
+            contents =
+              safe_inputs_for(f.source, :country, nil, false, fn f ->
+                assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+                assert f.errors == []
+
+                "from safe_inputs_for"
+              end)
+
+            assert contents == "from safe_inputs_for"
+
+            "from safe_inputs_for"
+          end)
+
+        assert contents == "from safe_inputs_for"
 
         1
       end)
