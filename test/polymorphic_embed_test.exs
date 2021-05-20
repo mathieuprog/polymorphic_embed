@@ -1192,6 +1192,85 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  test "form with errors" do
+    for polymorphic? <- [false, true] do
+      reminder_module = get_module(Reminder, polymorphic?)
+
+      sms_reminder_attrs = %{
+        text: "This is an SMS reminder",
+        channel: %{
+          my_type_field: "sms"
+        },
+        contexts: [
+          %{
+            __type__: "location",
+            address: "hello",
+            country: %{
+              name: ""
+            }
+          },
+          %{
+            __type__: "location",
+            address: ""
+          }
+        ]
+      }
+
+      changeset =
+        struct(reminder_module)
+        |> reminder_module.changeset(sms_reminder_attrs)
+
+      changeset = %{changeset | action: :insert}
+
+      safe_form_for(changeset, fn f ->
+        assert f.errors ==  [date: {"can't be blank", [validation: :required]}]
+
+        safe_inputs_for(changeset, :channel, :sms, polymorphic?, fn f ->
+          assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+
+          assert f.errors == [
+            number: {"can't be blank", [validation: :required]},
+            country_code: {"can't be blank", [validation: :required]},
+            provider: {"can't be blank", [validation: :required]}
+          ]
+
+          1
+        end)
+
+        safe_inputs_for(changeset, :contexts, :location, polymorphic?, fn %{index: index} = f ->
+
+          assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+
+          if index == 0 do
+            assert f.errors == []
+          else
+            assert f.errors == [address: {"can't be blank", [validation: :required]}]
+          end
+
+          safe_inputs_for(f.source, :country, nil, false, fn f ->
+
+            assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+
+            if index == 0 do
+              assert f.errors == [name: {"can't be blank", [validation: :required]}]
+            else
+              assert f.errors == []
+            end
+
+            # assert f.errors == []
+
+
+            1
+          end)
+
+          1
+        end)
+
+        1
+      end)
+    end
+  end
+
   describe "get_polymorphic_type/3" do
     test "returns the type for a module" do
       assert PolymorphicEmbed.get_polymorphic_type(
@@ -1239,5 +1318,9 @@ defmodule PolymorphicEmbedTest do
 
     [_, inner, _] = String.split(contents, mark)
     inner
+  end
+
+  defp safe_form_for(changeset, opts \\ [], function) do
+    safe_to_string(form_for(changeset, "/", opts, function))
   end
 end

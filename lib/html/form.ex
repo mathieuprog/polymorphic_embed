@@ -22,29 +22,35 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
       id = to_string(form.id <> "_#{field}")
       name = to_string(form.name <> "[#{field}]")
 
-      params = Map.get(source_changeset.params || %{}, to_string(field), %{})
-      errors = get_errors(source_changeset, field)
-      data = get_data(source_changeset, field, type)
+      params = Map.get(source_changeset.params || %{}, to_string(field), %{}) |> List.wrap()
+      list_data = Ecto.Changeset.fetch_field!(source_changeset, field) |> List.wrap()
 
-      changeset =
-        Ecto.Changeset.change(data)
-        |> apply_action(parent_action)
+      list_data
+      |> Enum.with_index()
+      |> Enum.map(fn {data, i} ->
+        params = Enum.at(params, i)
 
-      changeset =
-        %Ecto.Changeset{
-          changeset
-          | action: parent_action,
-            params: params,
-            errors: errors,
-            valid?: errors == []
-        }
-        |> add_changes_for_nested_embeds(params, errors)
+        changeset =
+          Ecto.Changeset.change(data)
+          |> apply_action(parent_action)
 
-      [
+        errors = get_errors(changeset)
+
+        changeset =
+          %Ecto.Changeset{
+            changeset
+            | action: parent_action,
+              params: params,
+              errors: errors,
+              valid?: errors == []
+          }
+          |> add_changes_for_nested_embeds(params, errors)
+
         %Phoenix.HTML.Form{
           source: changeset,
           impl: Phoenix.HTML.FormData.Ecto.Changeset,
           id: id,
+          index: if(length(list_data) > 1, do: i),
           name: name,
           errors: errors,
           data: data,
@@ -52,7 +58,7 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
           hidden: [__type__: to_string(type)],
           options: options
         }
-      ]
+      end)
     end
 
     # If the parent changeset had no action, we need to remove the action
@@ -60,29 +66,9 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
     defp apply_action(changeset, nil), do: %{changeset | action: nil}
     defp apply_action(changeset, _action), do: changeset
 
-    defp get_errors(%{action: nil}, _field), do: []
-    defp get_errors(%{action: :ignore}, _field), do: []
-
-    defp get_errors(changeset, field) do
-      Ecto.Changeset.get_change(changeset, field)
-      |> do_get_errors()
-    end
-
-    defp do_get_errors(nil), do: []
-    defp do_get_errors(%{errors: errors}), do: errors
-    defp do_get_errors(_schema), do: []
-
-    defp get_data(changeset, field, type) do
-      struct = Ecto.Changeset.apply_changes(changeset)
-
-      case Map.get(struct, field) do
-        nil ->
-          struct(PolymorphicEmbed.get_polymorphic_module(struct.__struct__, field, type))
-
-        data ->
-          data
-      end
-    end
+    defp get_errors(%{action: nil}), do: []
+    defp get_errors(%{action: :ignore}), do: []
+    defp get_errors(%{errors: errors}), do: errors
 
     defp add_changes_for_nested_embeds(changeset, params, _errors) when params == %{},
       do: changeset
