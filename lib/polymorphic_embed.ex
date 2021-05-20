@@ -344,7 +344,7 @@ defmodule PolymorphicEmbed do
   defp raise_cannot_infer_type_from_data(data),
     do: raise("could not infer polymorphic embed from data #{inspect(data)}")
 
-  def traverse_errors(%Ecto.Changeset{errors: errors, changes: changes, types: types} = changeset, msg_func)
+  def traverse_errors(%Ecto.Changeset{changes: changes, types: types} = changeset, msg_func)
       when is_function(msg_func, 1) or is_function(msg_func, 3) do
 
     Ecto.Changeset.traverse_errors(changeset, msg_func)
