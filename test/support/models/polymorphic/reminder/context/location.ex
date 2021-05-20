@@ -5,13 +5,14 @@ defmodule PolymorphicEmbed.Reminder.Context.Location do
   @primary_key false
 
   embedded_schema do
-    belongs_to :country, PolymorphicEmbed.Country
+    embeds_one(:country, PolymorphicEmbed.Country, on_replace: :update)
     field :address, :string
   end
 
   def changeset(struct, params) do
     struct
     |> cast(params, ~w(address)a)
-    |> cast_assoc(:country)
+    |> validate_required(~w(address)a)
+    |> cast_embed(:country)
   end
 end

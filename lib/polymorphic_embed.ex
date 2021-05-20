@@ -343,4 +343,44 @@ defmodule PolymorphicEmbed do
 
   defp raise_cannot_infer_type_from_data(data),
     do: raise("could not infer polymorphic embed from data #{inspect(data)}")
+
+  def traverse_errors(%Ecto.Changeset{errors: errors, changes: changes, types: types} = changeset, msg_func)
+      when is_function(msg_func, 1) or is_function(msg_func, 3) do
+
+    Ecto.Changeset.traverse_errors(changeset, msg_func)
+    |> merge_polymorphic_keys(changes, types, msg_func)
+  end
+
+  defp merge_polymorphic_keys(map, changes, types, msg_func) do
+    Enum.reduce types, map, fn
+      {field, {:parameterized, PolymorphicEmbed, _opts}}, acc ->
+        if changeset = Map.get(changes, field) do
+          case traverse_errors(changeset, msg_func) do
+            errors when errors == %{} -> acc
+            errors -> Map.put(acc, field, errors)
+          end
+        else
+          acc
+        end
+
+      {field, {:array, {:parameterized, PolymorphicEmbed, _opts}}}, acc ->
+        if changesets = Map.get(changes, field) do
+          {errors, all_empty?} =
+            Enum.map_reduce(changesets, true, fn changeset, all_empty? ->
+              errors = traverse_errors(changeset, msg_func)
+              {errors, all_empty? and errors == %{}}
+            end)
+
+          case all_empty? do
+            true  -> acc
+            false -> Map.put(acc, field, errors)
+          end
+        else
+          acc
+        end
+
+     {_, _}, acc ->
+      acc
+    end
+  end
 end

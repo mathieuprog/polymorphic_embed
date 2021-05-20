@@ -1,8 +1,17 @@
 defmodule PolymorphicEmbed.Regular.Country do
   use Ecto.Schema
+  import Ecto.Changeset
 
-  schema "countries" do
+  @primary_key false
+
+  embedded_schema do
     field :name, :string
     timestamps()
+  end
+
+  def changeset(struct, params) do
+    struct
+    |> cast(params, ~w(name)a)
+    |> validate_required(~w(name)a)
   end
 end
