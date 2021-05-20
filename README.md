@@ -197,6 +197,10 @@ Sometimes you need to serialize the polymorphic embed and, once in the front-end
 PolymorphicEmbed.get_polymorphic_type(Reminder, :channel, SMS) == :sms
 ```
 
+### `traverse_errors/2`
+
+The function `Ecto.changeset.traverse_errors/2` won't include the errors of polymorphic embeds. You may instead use `PolymorphicEmbed.traverse_errors/2` when working with polymorphic embeds.
+
 ## Features
 
 * Detect which types to use for the data being `cast`-ed, based on fields present in the data (no need for a *type* field in the data)
