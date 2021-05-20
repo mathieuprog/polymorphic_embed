@@ -1222,44 +1222,40 @@ defmodule PolymorphicEmbedTest do
 
       changeset = %{changeset | action: :insert}
 
-      form =
-        form_for(changeset, fn f ->
-          assert f.errors ==  [date: {"can't be blank", [validation: :required]}]
+      safe_form_for(changeset, fn f ->
+        assert f.errors == [date: {"can't be blank", [validation: :required]}]
 
-          safe_inputs_for(changeset, :channel, :sms, polymorphic?, fn f ->
-            assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+        safe_inputs_for(changeset, :channel, :sms, polymorphic?, fn f ->
+          assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
-            assert f.errors == [
-              number: {"can't be blank", [validation: :required]},
-              country_code: {"can't be blank", [validation: :required]},
-              provider: {"can't be blank", [validation: :required]}
-            ]
+          assert f.errors == [
+            number: {"can't be blank", [validation: :required]},
+            country_code: {"can't be blank", [validation: :required]},
+            provider: {"can't be blank", [validation: :required]}
+          ]
 
-            1
-          end)
+          1
+        end)
 
-          safe_inputs_for(changeset, :contexts, :location, polymorphic?, fn %{index: index} = f ->
+        safe_inputs_for(changeset, :contexts, :location, polymorphic?, fn %{index: index} = f ->
+
+          assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+
+          if index == 0 do
+            assert f.errors == []
+          else
+            assert f.errors == [address: {"can't be blank", [validation: :required]}]
+          end
+
+          safe_inputs_for(f.source, :country, nil, false, fn f ->
 
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
             if index == 0 do
-              assert f.errors == []
+              assert f.errors == [name: {"can't be blank", [validation: :required]}]
             else
-              assert f.errors == [address: {"can't be blank", [validation: :required]}]
+              assert f.errors == []
             end
-
-            safe_inputs_for(f.source, :country, nil, false, fn f ->
-
-              assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
-
-              if index == 0 do
-                assert f.errors == [name: {"can't be blank", [validation: :required]}]
-              else
-                assert f.errors == []
-              end
-
-              1
-            end)
 
             1
           end)
@@ -1267,7 +1263,8 @@ defmodule PolymorphicEmbedTest do
           1
         end)
 
-      assert %Phoenix.HTML.Form{} = form
+        1
+      end)
     end
   end
 
@@ -1287,29 +1284,23 @@ defmodule PolymorphicEmbedTest do
 
       changeset = %{changeset | action: :insert}
 
-      form =
-        form_for(changeset, fn f ->
-          assert f.errors ==  [date: {"can't be blank", [validation: :required]}]
+      safe_form_for(changeset, fn f ->
+        assert f.errors == [date: {"can't be blank", [validation: :required]}]
 
-          safe_inputs_for(changeset, :channel, :sms, polymorphic?, fn f ->
+        safe_inputs_for(changeset, :channel, :sms, polymorphic?, fn f ->
+          assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+          assert f.errors == []
+
+          1
+        end)
+
+        safe_inputs_for(changeset, :contexts, :location, polymorphic?, fn f ->
+          assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+          assert f.errors == []
+
+          safe_inputs_for(f.source, :country, nil, false, fn f ->
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
             assert f.errors == []
-
-            1
-          end)
-
-          safe_inputs_for(changeset, :contexts, :location, polymorphic?, fn f ->
-
-            assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
-            assert f.errors == []
-
-            safe_inputs_for(f.source, :country, nil, false, fn f ->
-
-              assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
-              assert f.errors == []
-
-              1
-            end)
 
             1
           end)
@@ -1317,7 +1308,8 @@ defmodule PolymorphicEmbedTest do
           1
         end)
 
-      assert %Phoenix.HTML.Form{} = form
+        1
+      end)
     end
   end
 
@@ -1368,5 +1360,9 @@ defmodule PolymorphicEmbedTest do
 
     [_, inner, _] = String.split(contents, mark)
     inner
+  end
+
+  defp safe_form_for(changeset, opts \\ [], function) do
+    safe_to_string(form_for(changeset, "/", opts, function))
   end
 end
