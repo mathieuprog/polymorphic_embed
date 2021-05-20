@@ -1295,7 +1295,7 @@ defmodule PolymorphicEmbedTest do
             "from safe_inputs_for #{polymorphic?}"
           end)
 
-        assert contents == "from safe_inputs_for #{polymorphic?}"
+        assert contents =~ "from safe_inputs_for #{polymorphic?}"
 
         contents =
           safe_inputs_for(changeset, :contexts, :location, polymorphic?, fn f ->

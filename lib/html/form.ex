@@ -23,12 +23,12 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
       name = to_string(form.name <> "[#{field}]")
 
       params = Map.get(source_changeset.params || %{}, to_string(field), %{}) |> List.wrap()
-      list_data = Ecto.Changeset.fetch_field!(source_changeset, field) |> List.wrap()
+      list_data = get_data(source_changeset, field, type) |> List.wrap()
 
       list_data
       |> Enum.with_index()
       |> Enum.map(fn {data, i} ->
-        params = Enum.at(params, i)
+        params = Enum.at(params, i) || %{}
 
         changeset =
           Ecto.Changeset.change(data)
@@ -59,6 +59,18 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
           options: options
         }
       end)
+    end
+
+    defp get_data(changeset, field, type) do
+      struct = Ecto.Changeset.apply_changes(changeset)
+
+      case Map.get(struct, field) do
+        nil ->
+          struct(PolymorphicEmbed.get_polymorphic_module(struct.__struct__, field, type))
+
+        data ->
+          data
+      end
     end
 
     # If the parent changeset had no action, we need to remove the action
