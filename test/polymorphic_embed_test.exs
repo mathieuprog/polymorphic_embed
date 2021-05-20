@@ -1257,9 +1257,6 @@ defmodule PolymorphicEmbedTest do
               assert f.errors == []
             end
 
-            # assert f.errors == []
-
-
             1
           end)
 
