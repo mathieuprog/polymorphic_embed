@@ -1209,7 +1209,7 @@ defmodule PolymorphicEmbedTest do
             __type__: "location",
             address: "hello",
             country: %{
-              name: ""
+              name: "A"
             }
           },
           %{
@@ -1269,7 +1269,7 @@ defmodule PolymorphicEmbedTest do
                 assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
                 if index == 0 do
-                  assert f.errors == [name: {"can't be blank", [validation: :required]}]
+                  assert f.errors == [name: {"should be at least %{count} character(s)", [count: 3, validation: :length, kind: :min, type: :string]}]
                 else
                   assert f.errors == []
                 end

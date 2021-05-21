@@ -13,5 +13,6 @@ defmodule PolymorphicEmbed.Country do
     struct
     |> cast(params, ~w(name)a)
     |> validate_required(~w(name)a)
+    |> validate_length(:name, min: 3)
   end
 end
