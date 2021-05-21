@@ -1225,43 +1225,50 @@ defmodule PolymorphicEmbedTest do
       safe_form_for(changeset, fn f ->
         assert f.errors == [date: {"can't be blank", [validation: :required]}]
 
-        safe_inputs_for(changeset, :channel, :sms, polymorphic?, fn f ->
-          assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+        contents =
+          safe_inputs_for(changeset, :channel, :sms, polymorphic?, fn f ->
+            assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
-          assert f.errors == [
-            number: {"can't be blank", [validation: :required]},
-            country_code: {"can't be blank", [validation: :required]},
-            provider: {"can't be blank", [validation: :required]}
-          ]
+            assert f.errors == [
+              number: {"can't be blank", [validation: :required]},
+              country_code: {"can't be blank", [validation: :required]},
+              provider: {"can't be blank", [validation: :required]}
+            ]
 
-          1
-        end)
+            "from safe_inputs_for #{polymorphic?}"
+          end)
 
-        safe_inputs_for(changeset, :contexts, :location, polymorphic?, fn %{index: index} = f ->
+        assert contents =~ "from safe_inputs_for #{polymorphic?}"
 
-          assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
-
-          if index == 0 do
-            assert f.errors == []
-          else
-            assert f.errors == [address: {"can't be blank", [validation: :required]}]
-          end
-
-          safe_inputs_for(f.source, :country, nil, false, fn f ->
-
+        contents =
+          safe_inputs_for(changeset, :contexts, :location, polymorphic?, fn %{index: index} = f ->
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
             if index == 0 do
-              assert f.errors == [name: {"can't be blank", [validation: :required]}]
-            else
               assert f.errors == []
+            else
+              assert f.errors == [address: {"can't be blank", [validation: :required]}]
             end
 
-            1
+            contents =
+              safe_inputs_for(f.source, :country, nil, false, fn f ->
+                assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+
+                if index == 0 do
+                  assert f.errors == [name: {"can't be blank", [validation: :required]}]
+                else
+                  assert f.errors == []
+                end
+
+                "from safe_inputs_for #{polymorphic?}"
+              end)
+
+              assert contents =~ "from safe_inputs_for #{polymorphic?}"
+
+            "from safe_inputs_for #{polymorphic?}"
           end)
 
-          1
-        end)
+        assert contents =~ "from safe_inputs_for #{polymorphic?}"
 
         1
       end)
