@@ -1199,7 +1199,10 @@ defmodule PolymorphicEmbedTest do
       sms_reminder_attrs = %{
         text: "This is an SMS reminder",
         channel: %{
-          my_type_field: "sms"
+          my_type_field: "sms",
+          result: %{
+            success: ""
+          }
         },
         contexts: [
           %{
@@ -1234,6 +1237,17 @@ defmodule PolymorphicEmbedTest do
               country_code: {"can't be blank", [validation: :required]},
               provider: {"can't be blank", [validation: :required]}
             ]
+
+            contents =
+              safe_inputs_for(f.source, :result, nil, false, fn f ->
+                assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+
+                assert f.errors == [success: {"can't be blank", [validation: :required]}]
+
+                "from safe_inputs_for #{polymorphic?}"
+              end)
+
+            assert contents =~ "from safe_inputs_for #{polymorphic?}"
 
             "from safe_inputs_for #{polymorphic?}"
           end)

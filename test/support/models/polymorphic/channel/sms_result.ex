@@ -11,5 +11,6 @@ defmodule PolymorphicEmbed.Channel.SMSResult do
   def changeset(struct, attrs) do
     struct
     |> cast(attrs, [:success])
+    |> validate_required([:success])
   end
 end
