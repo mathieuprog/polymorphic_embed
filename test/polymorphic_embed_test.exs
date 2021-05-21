@@ -1328,7 +1328,7 @@ defmodule PolymorphicEmbedTest do
             "from safe_inputs_for #{polymorphic?}"
           end)
 
-          assert contents =~ "from safe_inputs_for #{polymorphic?}"
+        assert contents =~ "from safe_inputs_for #{polymorphic?}"
 
         1
       end)
