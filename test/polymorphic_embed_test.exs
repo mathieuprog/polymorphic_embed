@@ -1289,6 +1289,52 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  test "keep changes in embeds_one (nested into a polymorphic embed) when invalid changeset" do
+    for polymorphic? <- [false, true] do
+      reminder_module = get_module(Reminder, polymorphic?)
+
+      sms_reminder_attrs = %{
+        text: "This is an SMS reminder",
+        channel: %{
+          my_type_field: "sms",
+          result: %{
+            success: true
+          }
+        }
+      }
+
+      changeset =
+        struct(reminder_module)
+        |> reminder_module.changeset(sms_reminder_attrs)
+
+      changeset = %{changeset | action: :insert}
+
+      safe_form_for(changeset, fn f ->
+        assert f.errors == [date: {"can't be blank", [validation: :required]}]
+
+        contents =
+          safe_inputs_for(changeset, :channel, :sms, polymorphic?, fn f ->
+
+            contents =
+              safe_inputs_for(f.source, :result, nil, false, fn f ->
+                text_input(f, :success)
+              end)
+
+            expected_contents =
+              ~s(<input id="sms_result_success" name="sms[result][success]" type="text" value="true">)
+
+            assert contents == expected_contents
+
+            "from safe_inputs_for #{polymorphic?}"
+          end)
+
+          assert contents =~ "from safe_inputs_for #{polymorphic?}"
+
+        1
+      end)
+    end
+  end
+
   test "form with polymorphic embed to nil" do
     for polymorphic? <- [false, true] do
       reminder_module = get_module(Reminder, polymorphic?)
