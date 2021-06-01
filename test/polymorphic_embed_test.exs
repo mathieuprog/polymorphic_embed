@@ -73,6 +73,36 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  test "validations before casting polymorphic embed still work" do
+    for polymorphic? <- [false, true] do
+      reminder_module = get_module(Reminder, polymorphic?)
+
+      sms_reminder_attrs = %{
+        text: "This is an SMS reminder #{polymorphic?}",
+        contexts: [
+          %{
+            __type__: "location",
+            address: "Foo St."
+          },
+          %{
+            __type__: "location",
+            address: "Bar St."
+          }
+        ]
+      }
+
+      insert_result =
+        struct(reminder_module)
+        |> reminder_module.changeset(sms_reminder_attrs)
+        |> Repo.insert()
+
+      assert {:error, changeset} = insert_result
+
+      assert changeset.errors == [date: {"can't be blank", [validation: :required]}]
+      refute changeset.valid?
+    end
+  end
+
   test "invalid values" do
     for polymorphic? <- [false, true] do
       reminder_module = get_module(Reminder, polymorphic?)
