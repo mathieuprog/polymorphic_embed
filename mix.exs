@@ -60,7 +60,10 @@ defmodule PolymorphicEmbed.MixProject do
     [
       licenses: ["Apache 2.0"],
       maintainers: ["Mathieu Decaffmeyer"],
-      links: %{"GitHub" => "https://github.com/mathieuprog/polymorphic_embed"}
+      links: %{
+        "GitHub" => "https://github.com/mathieuprog/polymorphic_embed",
+        "Sponsor" => "https://github.com/sponsors/mathieuprog"
+      }
     ]
   end
 
