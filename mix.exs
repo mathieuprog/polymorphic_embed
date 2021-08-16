@@ -33,7 +33,7 @@ defmodule PolymorphicEmbed.MixProject do
     [
       {:ecto, "~> 3.6"},
       {:jason, "~> 1.2"},
-      {:phoenix_html, "~> 2.14", optional: true},
+      {:phoenix_html, "~> 2.14 or ~> 3.0", optional: true},
       {:ex_doc, "~> 0.23", only: :dev},
       {:ecto_sql, "~> 3.6", only: :test},
       {:postgrex, "~> 0.15", only: :test},
