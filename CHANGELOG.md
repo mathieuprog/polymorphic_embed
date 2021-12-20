@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.x
+
+  * Add `:nilify` and `:ignore` for `:on_type_not_found` option
+
 ## 1.7.x
 
   * Support the SQLite3 Ecto adapter `ecto_sqlite3`
