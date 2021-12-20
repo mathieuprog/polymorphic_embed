@@ -767,6 +767,50 @@ defmodule PolymorphicEmbedTest do
     assert {:error, %Ecto.Changeset{errors: [channel: {"is invalid", []}]}} = insert_result
   end
 
+  test "missing __type__ nilifies" do
+    polymorphic? = true
+    reminder_module = get_module(Reminder, polymorphic?)
+
+    sms_reminder_attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an SMS reminder",
+      channel: %{
+        my_type_field: "sms",
+        number: "02/807.05.53",
+        country_code: 1,
+        result: %{success: true},
+        attempts: [
+          %{
+            date: ~U[2020-05-28 07:27:05Z],
+            result: %{success: true}
+          },
+          %{
+            date: ~U[2020-05-29 07:27:05Z],
+            result: %{success: false}
+          },
+          %{
+            date: ~U[2020-05-30 07:27:05Z],
+            result: %{success: true}
+          }
+        ],
+        provider: %{
+          __type__: "twilio",
+          api_key: "foo"
+        },
+        fallback_provider: %{
+          api_key: "foo"
+        }
+      }
+    }
+
+    insert_result =
+      struct(reminder_module)
+      |> reminder_module.changeset(sms_reminder_attrs)
+      |> Repo.insert()
+
+    assert {:ok, %{channel: %{fallback_provider: nil}}} = insert_result
+  end
+
   test "missing __type__ leads to raising error" do
     polymorphic? = true
     reminder_module = get_module(Reminder, polymorphic?)
@@ -990,6 +1034,33 @@ defmodule PolymorphicEmbedTest do
       end
 
       if polymorphic? do
+        attrs = %{
+          date: ~U[2020-05-28 02:57:19Z],
+          text: "This is a reminder with multiple contexts",
+          contexts2: [
+            %{
+              id: "12345",
+              type: "cellphone",
+              address: "address"
+            },
+            %{
+              __type__: "age",
+              age: "aquarius",
+              address: "address"
+            }
+          ]
+        }
+
+        insert_result =
+          struct(reminder_module)
+          |> reminder_module.changeset(attrs)
+          |> Repo.insert()
+
+        assert {:ok,
+          %{contexts2: [%{
+            age: "aquarius"
+          }]}} = insert_result
+
         attrs = %{
           date: ~U[2020-05-28 02:57:19Z],
           text: "This is a reminder with multiple contexts",

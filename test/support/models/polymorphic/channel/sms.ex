@@ -20,6 +20,15 @@ defmodule PolymorphicEmbed.Channel.SMS do
       on_replace: :update
     )
 
+    field(:fallback_provider, PolymorphicEmbed,
+      types: [
+        twilio: PolymorphicEmbed.Channel.TwilioSMSProvider,
+        test: PolymorphicEmbed.Channel.AcmeSMSProvider
+      ],
+      on_type_not_found: :nilify,
+      on_replace: :update
+    )
+
     embeds_one(:result, PolymorphicEmbed.Channel.SMSResult)
     embeds_many(:attempts, PolymorphicEmbed.Channel.SMSAttempts)
   end
@@ -30,6 +39,7 @@ defmodule PolymorphicEmbed.Channel.SMS do
     |> cast_embed(:result)
     |> cast_embed(:attempts)
     |> cast_polymorphic_embed(:provider, required: true)
+    |> cast_polymorphic_embed(:fallback_provider, required: false)
     |> validate_required([:number, :country_code])
   end
 
