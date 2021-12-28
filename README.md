@@ -154,6 +154,7 @@ field :contexts, {:array, PolymorphicEmbed},
   - `:changeset_error`: add a changeset error
   - `:nilify`: replace the data by `nil`; only for single (non-list) embeds
   - `:ignore`: ignore the data; only for lists of embeds
+  
   By default, a changeset error "is invalid" is added.
 * `:on_replace` – mandatory option that can only be set to `:update` for a single embed and `:delete` for a list of
   embeds (we force a value as the default value of this option for `embeds_one` and `embeds_many` is `:raise`).
