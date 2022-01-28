@@ -368,6 +368,14 @@ defmodule PolymorphicEmbed do
     |> merge_polymorphic_keys(changes, types, msg_func)
   end
 
+  # We need to match the case where an invalid changeset has a PolymorphicEmbed field which is valid,
+  # then that PolymorphicEmbed field is already converted to a struct and no longer a changeset.
+  # Since the said field is converted to a struct there's errors to check for.
+  def traverse_errors(%_{}, msg_func)
+      when is_function(msg_func, 1) or is_function(msg_func, 3) do
+    %{}
+  end
+
   defp merge_polymorphic_keys(map, changes, types, msg_func) do
     Enum.reduce types, map, fn
       {field, {:parameterized, PolymorphicEmbed, _opts}}, acc ->
