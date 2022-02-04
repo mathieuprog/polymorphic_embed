@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.x
+
+  * Add `PolymorphicEmbed.types/2` function returning the possible types for a polymorphic field
+
 ## 1.8.x
 
   * Add `:nilify` and `:ignore` for `:on_type_not_found` option
