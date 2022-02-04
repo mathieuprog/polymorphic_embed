@@ -332,6 +332,18 @@ defmodule PolymorphicEmbed do
     |> String.to_atom()
   end
 
+  @doc """
+  Returns the possible types for a given schema and field
+
+  you can call `types/2` like this:
+      PolymorphicEmbed.types(MySchema, :contexts)
+      #=> [:location, :age, :device]
+  """
+  def types(schema, field) do
+    %{types_metadata: types_metadata} = get_field_options(schema, field)
+    Enum.map(types_metadata, &String.to_existing_atom(&1.type))
+  end
+
   defp get_metadata_for_module(module, types_metadata) do
     Enum.find(types_metadata, &(module == &1.module))
   end

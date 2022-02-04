@@ -1597,6 +1597,13 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  describe "types/2" do
+    test "returns the types for a polymoprhic embed field" do
+      assert PolymorphicEmbed.types(PolymorphicEmbed.Reminder, :channel) ==
+               [:sms, :email]
+    end
+  end
+
   describe "get_polymorphic_module/3" do
     test "returns the module for a type" do
       assert PolymorphicEmbed.get_polymorphic_module(PolymorphicEmbed.Reminder, :channel, :sms) ==
