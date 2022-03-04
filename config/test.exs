@@ -1,6 +1,8 @@
-use Mix.Config
+import Config
 
 config :logger, level: :warn
+
+config :phoenix, :json_library, Jason
 
 config :polymorphic_embed,
   ecto_repos: [PolymorphicEmbed.Repo]
