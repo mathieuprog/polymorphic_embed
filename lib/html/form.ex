@@ -3,6 +3,38 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
     import Phoenix.HTML, only: [html_escape: 1]
     import Phoenix.HTML.Form, only: [hidden_inputs_for: 1]
 
+    @doc """
+    Generates a new form builder without an anonymous function.
+
+    Similarly to `Phoenix.HTML.Form.inputs_for/3`, this function exists for
+    integration with `Phoenix.LiveView`.
+
+    Unlike `polymorphic_embed_inputs_for/4`, this function does not generate
+    hidden inputs.
+
+    ## Example
+
+        <.form
+          let={f}
+          for={@changeset}
+          id="reminder-form"
+          phx-change="validate"
+          phx-submit="save"
+        >
+          <%= for sms_form <- polymorphic_embed_inputs_for f, :channel, :sms do %>
+            <%= hidden_inputs_for(sms_form) %>
+
+            <%= label sms_form, :number %>
+            <%= text_input sms_form, :number %>
+          <% end %>
+        </.form>
+    """
+    def polymorphic_embed_inputs_for(form, field, type)
+        when is_atom(field) or is_binary(field) do
+      options = Keyword.take(form.options, [:multipart])
+      to_form(form.source, form, field, type, options)
+    end
+
     def polymorphic_embed_inputs_for(form, field, type, fun)
         when is_atom(field) or is_binary(field) do
       options =

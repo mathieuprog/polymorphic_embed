@@ -38,7 +38,9 @@ defmodule PolymorphicEmbed.MixProject do
       {:ecto_sql, "~> 3.6", only: :test},
       {:postgrex, "~> 0.15", only: :test},
       {:query_builder, "~> 0.19.2", only: :test},
-      {:phoenix_ecto, "~> 4.2", only: :test}
+      {:phoenix_ecto, "~> 4.2", only: :test},
+      {:phoenix_live_view, "~> 0.17.7", only: :test},
+      {:floki, "~> 0.32.0", only: :test}
     ]
   end
 

@@ -4,6 +4,8 @@ defmodule PolymorphicEmbedTest do
 
   import Phoenix.HTML
   import Phoenix.HTML.Form
+  import Phoenix.LiveView.Helpers
+  import Phoenix.LiveViewTest
   import PolymorphicEmbed.HTML.Form
 
   alias PolymorphicEmbed.Repo
@@ -1225,6 +1227,41 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  describe "inputs_for/3" do
+    test "generates forms that can be rendered" do
+      reminder_module = get_module(Reminder, true)
+
+      attrs = %{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is an Email reminder",
+        channel: %{
+          address: "a",
+          valid: true,
+          confirmed: true
+        }
+      }
+
+      changeset =
+        reminder_module
+        |> struct()
+        |> reminder_module.changeset(attrs)
+
+      html =
+        render_component(
+          &liveview_form/1,
+          %{changeset: changeset, field: :channel, type: :email}
+        )
+        |> Floki.parse_fragment!()
+
+      assert [input] = Floki.find(html, "#reminder_channel___type__")
+      assert Floki.attribute(input, "type") == ["hidden"]
+      assert Floki.attribute(input, "value") == ["email"]
+
+      assert [input] = Floki.find(html, "#reminder_channel_number")
+      assert Floki.attribute(input, "type") == ["text"]
+    end
+  end
+
   test "inputs_for/4" do
     for polymorphic? <- [false, true] do
       reminder_module = get_module(Reminder, polymorphic?)
@@ -1633,5 +1670,19 @@ defmodule PolymorphicEmbedTest do
 
   defp safe_form_for(changeset, opts \\ [], function) do
     safe_to_string(form_for(changeset, "/", opts, function))
+  end
+
+  defp liveview_form(assigns) do
+    ~H"""
+    <.form
+      let={f}
+      for={@changeset}
+    >
+      <%= for sms_form <- polymorphic_embed_inputs_for f, @field, @type do %>
+        <%= hidden_inputs_for(sms_form) %>
+        <%= text_input sms_form, :number %>
+      <% end %>
+    </.form>
+    """
   end
 end
