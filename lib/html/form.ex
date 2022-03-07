@@ -1,7 +1,32 @@
 if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) do
   defmodule PolymorphicEmbed.HTML.Form do
     import Phoenix.HTML, only: [html_escape: 1]
-    import Phoenix.HTML.Form, only: [hidden_inputs_for: 1]
+    import Phoenix.HTML.Form, only: [hidden_inputs_for: 1, input_value: 2]
+
+    @doc """
+    Returns the polymorphic type of the given field in the given form data.
+    """
+    def get_polymorphic_type(%Phoenix.HTML.Form{} = form, schema, field) do
+      case input_value(form, field) do
+        %Ecto.Changeset{data: value} ->
+          PolymorphicEmbed.get_polymorphic_type(schema, field, value)
+
+        %_{} = value ->
+          PolymorphicEmbed.get_polymorphic_type(schema, field, value)
+
+        %{"__type__" => type} ->
+          maybe_to_existing_atom(type)
+
+        %{__type__: type} ->
+          maybe_to_existing_atom(type)
+
+        _ ->
+          nil
+      end
+    end
+
+    defp maybe_to_existing_atom(type) when is_binary(type), do: String.to_existing_atom(type)
+    defp maybe_to_existing_atom(type) when is_atom(type), do: type
 
     @doc """
     Generates a new form builder without an anonymous function.

@@ -1634,6 +1634,107 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  describe "Form.get_polymorphic_type/3" do
+    test "returns type from changeset" do
+      reminder_module = get_module(Reminder, true)
+
+      attrs = %{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is an Email reminder",
+        channel: %{
+          address: "a",
+          valid: true,
+          confirmed: true
+        }
+      }
+
+      changeset =
+        reminder_module
+        |> struct()
+        |> reminder_module.changeset(attrs)
+
+      safe_form_for(changeset, fn f ->
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel) ==
+                 :email
+
+        text_input(f, :text)
+      end)
+    end
+
+    test "returns type from struct" do
+      reminder_module = get_module(Reminder, true)
+
+      channel = %PolymorphicEmbed.Channel.Email{
+        address: "a",
+        valid: true,
+        confirmed: true
+      }
+
+      changeset =
+        reminder_module
+        |> struct()
+        |> Map.put(:channel, channel)
+        |> reminder_module.changeset(%{})
+
+      safe_form_for(changeset, fn f ->
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel) ==
+                 :email
+
+        text_input(f, :text)
+      end)
+    end
+
+    test "returns type from string parameters" do
+      reminder_module = get_module(Reminder, true)
+      attrs = %{"channel" => %{"__type__" => "email"}}
+
+      changeset =
+        reminder_module
+        |> struct()
+        |> reminder_module.changeset(attrs)
+
+      safe_form_for(changeset, fn f ->
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel) ==
+                 :email
+
+        text_input(f, :text)
+      end)
+    end
+
+    test "returns type from atom parameters" do
+      reminder_module = get_module(Reminder, true)
+      attrs = %{channel: %{__type__: :email}}
+
+      changeset =
+        reminder_module
+        |> struct()
+        |> reminder_module.changeset(attrs)
+
+      safe_form_for(changeset, fn f ->
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel) ==
+                 :email
+
+        text_input(f, :text)
+      end)
+    end
+
+    test "returns nil without source struct and __type__ parameter" do
+      reminder_module = get_module(Reminder, true)
+
+      changeset =
+        reminder_module
+        |> struct()
+        |> reminder_module.changeset(%{})
+
+      safe_form_for(changeset, fn f ->
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel) ==
+                 nil
+
+        text_input(f, :text)
+      end)
+    end
+  end
+
   describe "types/2" do
     test "returns the types for a polymoprhic embed field" do
       assert PolymorphicEmbed.types(PolymorphicEmbed.Reminder, :channel) ==
