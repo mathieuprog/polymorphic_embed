@@ -1227,7 +1227,7 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
-  describe "inputs_for/3" do
+  describe "polymorphic_embed_inputs_for/2" do
     test "generates forms that can be rendered" do
       reminder_module = get_module(Reminder, true)
 
@@ -1249,7 +1249,7 @@ defmodule PolymorphicEmbedTest do
       html =
         render_component(
           &liveview_form/1,
-          %{changeset: changeset, field: :channel, type: :email}
+          %{changeset: changeset, field: :channel}
         )
         |> Floki.parse_fragment!()
 
@@ -1779,7 +1779,7 @@ defmodule PolymorphicEmbedTest do
       let={f}
       for={@changeset}
     >
-      <%= for sms_form <- polymorphic_embed_inputs_for f, @field, @type do %>
+      <%= for sms_form <- polymorphic_embed_inputs_for f, @field do %>
         <%= hidden_inputs_for(sms_form) %>
         <%= text_input sms_form, :number %>
       <% end %>

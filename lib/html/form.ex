@@ -46,7 +46,7 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
           phx-change="validate"
           phx-submit="save"
         >
-          <%= for sms_form <- polymorphic_embed_inputs_for f, :channel, :sms do %>
+          <%= for sms_form <- polymorphic_embed_inputs_for f, :channel do %>
             <%= hidden_inputs_for(sms_form) %>
 
             <%= label sms_form, :number %>
@@ -54,9 +54,11 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
           <% end %>
         </.form>
     """
-    def polymorphic_embed_inputs_for(form, field, type)
+    def polymorphic_embed_inputs_for(form, field)
         when is_atom(field) or is_binary(field) do
       options = Keyword.take(form.options, [:multipart])
+      %schema{} = form.source.data
+      type = get_polymorphic_type(form, schema, field)
       to_form(form.source, form, field, type, options)
     end
 
