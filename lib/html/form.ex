@@ -46,11 +46,17 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
           phx-change="validate"
           phx-submit="save"
         >
-          <%= for sms_form <- polymorphic_embed_inputs_for f, :channel do %>
-            <%= hidden_inputs_for(sms_form) %>
+          <%= for channel_form <- polymorphic_embed_inputs_for f, :channel do %>
+            <%= hidden_inputs_for(channel_form) %>
 
-            <%= label sms_form, :number %>
-            <%= text_input sms_form, :number %>
+            <%= case get_polymorphic_type(channel_form, Reminder, :channel) do %>
+              <% :sms -> %>
+                <%= label channel_form, :number %>
+                <%= text_input channel_form, :number %>
+
+              <% :email -> %>
+                <%= label channel_form, :email %>
+                <%= text_input channel_form, :email %>
           <% end %>
         </.form>
     """
