@@ -130,7 +130,8 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
 
       case Map.get(struct, field) do
         nil ->
-          struct(PolymorphicEmbed.get_polymorphic_module(struct.__struct__, field, type))
+          module = PolymorphicEmbed.get_polymorphic_module(struct.__struct__, field, type)
+          if module, do: struct(module), else: []
 
         data ->
           data
