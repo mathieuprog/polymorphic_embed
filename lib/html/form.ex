@@ -68,12 +68,52 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
       to_form(form.source, form, field, type, options)
     end
 
+    @doc """
+    Like `polymorphic_embed_inputs_for/4`, but determines the type from the
+    form data.
+
+    ## Example
+
+        <%= inputs_for f, :reminders, fn reminder_form -> %>
+          <%= polymorphic_embed_inputs_for reminder_form, :channel, fn channel_form -> %>
+            <%= case get_polymorphic_type(channel_form, Reminder, :channel) do %>
+              <% :sms -> %>
+                <%= label poly_form, :number %>
+                <%= text_input poly_form, :number %>
+
+              <% :email -> %>
+                <%= label poly_form, :email %>
+                <%= text_input poly_form, :email %>
+            <% end %>
+          <% end %>
+        <% end %>
+
+    While `polymorphic_embed_inputs_for/4` renders empty fields if the data is
+    `nil`, this function does not. Instead, you can initialize your changeset
+    to render an empty fieldset:
+
+        changeset = reminder_changeset(
+          %Reminder{},
+          %{"channel" => %{"__type__" => "sms"}}
+        )
+    """
+    def polymorphic_embed_inputs_for(form, field, fun)
+        when is_atom(field) or is_binary(field) do
+      options = Keyword.take(form.options, [:multipart])
+      %schema{} = form.source.data
+      type = get_polymorphic_type(form, schema, field)
+      forms = to_form(form.source, form, field, type, options)
+
+      html_escape(
+        Enum.map(forms, fn form ->
+          [hidden_inputs_for(form), fun.(form)]
+        end)
+      )
+    end
+
     def polymorphic_embed_inputs_for(form, field, type, fun)
         when is_atom(field) or is_binary(field) do
-      options =
-        form.options
-        |> Keyword.take([:multipart])
-
+      options = Keyword.take(form.options, [:multipart])
       forms = to_form(form.source, form, field, type, options)
 
       html_escape(

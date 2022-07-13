@@ -10,22 +10,25 @@ defmodule PolymorphicEmbedTest do
 
   alias PolymorphicEmbed.Repo
 
+  @generators [:not_polymorphic, :polymorphic, :polymorphic_with_type]
+
   setup do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Repo)
   end
 
-  defp get_module(name, true = _polymorphic?), do: Module.concat([PolymorphicEmbed, name])
+  defp get_module(name, generator) when generator in [:polymorphic, :polymorphic_with_type],
+    do: Module.concat([PolymorphicEmbed, name])
 
-  defp get_module(name, false = _polymorphic?),
+  defp get_module(name, :not_polymorphic),
     do: Module.concat([PolymorphicEmbed.Regular, name])
 
   test "receive embed as map of values" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
 
       sms_reminder_attrs = %{
         date: ~U[2020-05-28 02:57:19Z],
-        text: "This is an SMS reminder #{polymorphic?}",
+        text: "This is an SMS reminder #{generator}",
         channel: %{
           my_type_field: "sms",
           number: "02/807.05.53",
@@ -61,26 +64,26 @@ defmodule PolymorphicEmbedTest do
 
       reminder =
         reminder_module
-        |> QueryBuilder.where(text: "This is an SMS reminder #{polymorphic?}")
+        |> QueryBuilder.where(text: "This is an SMS reminder #{generator}")
         |> Repo.one()
 
-      assert get_module(Channel.SMS, polymorphic?) == reminder.channel.__struct__
+      assert get_module(Channel.SMS, generator) == reminder.channel.__struct__
 
-      assert get_module(Channel.TwilioSMSProvider, polymorphic?) ==
+      assert get_module(Channel.TwilioSMSProvider, generator) ==
                reminder.channel.provider.__struct__
 
-      assert get_module(Channel.SMSResult, polymorphic?) == reminder.channel.result.__struct__
+      assert get_module(Channel.SMSResult, generator) == reminder.channel.result.__struct__
       assert true == reminder.channel.result.success
       assert ~U[2020-05-28 07:27:05Z] == hd(reminder.channel.attempts).date
     end
   end
 
   test "validations before casting polymorphic embed still work" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
 
       sms_reminder_attrs = %{
-        text: "This is an SMS reminder #{polymorphic?}",
+        text: "This is an SMS reminder #{generator}",
         contexts: [
           %{
             __type__: "location",
@@ -106,8 +109,8 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "invalid values" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
 
       sms_reminder_attrs = %{
         date: ~U[2020-05-28 02:57:19Z],
@@ -147,8 +150,8 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "traverse_errors" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
 
       sms_reminder_attrs = %{
         text: "This is an SMS reminder",
@@ -223,7 +226,7 @@ defmodule PolymorphicEmbedTest do
       assert %{name: {"can't be blank", [validation: :required]}} = Map.new(country_errors)
 
       traverse_errors_fun =
-        if polymorphic? do
+        if polymorphic?(generator) do
           &PolymorphicEmbed.traverse_errors/2
         else
           &Ecto.Changeset.traverse_errors/2
@@ -250,8 +253,8 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "traverse_errors on changesets with valid polymorphic structs" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
 
       sms_reminder_attrs = %{
         text: "This is an SMS reminder",
@@ -318,7 +321,7 @@ defmodule PolymorphicEmbedTest do
       assert %{name: {"can't be blank", [validation: :required]}} = Map.new(country_errors)
 
       traverse_errors_fun =
-        if polymorphic? do
+        if polymorphic?(generator) do
           &PolymorphicEmbed.traverse_errors/2
         else
           &Ecto.Changeset.traverse_errors/2
@@ -340,17 +343,17 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "receive embed as struct" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
-      sms_module = get_module(Channel.SMS, polymorphic?)
-      sms_provider_module = get_module(Channel.TwilioSMSProvider, polymorphic?)
-      sms_result_module = get_module(Channel.SMSResult, polymorphic?)
-      sms_attempts_module = get_module(Channel.SMSAttempts, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+      sms_module = get_module(Channel.SMS, generator)
+      sms_provider_module = get_module(Channel.TwilioSMSProvider, generator)
+      sms_result_module = get_module(Channel.SMSResult, generator)
+      sms_attempts_module = get_module(Channel.SMSAttempts, generator)
 
       reminder =
         struct(reminder_module,
           date: ~U[2020-05-28 02:57:19Z],
-          text: "This is an SMS reminder #{polymorphic?}",
+          text: "This is an SMS reminder #{generator}",
           channel:
             struct(sms_module,
               provider:
@@ -379,7 +382,7 @@ defmodule PolymorphicEmbedTest do
 
       reminder =
         reminder_module
-        |> QueryBuilder.where(text: "This is an SMS reminder #{polymorphic?}")
+        |> QueryBuilder.where(text: "This is an SMS reminder #{generator}")
         |> Repo.one()
 
       assert sms_module == reminder.channel.__struct__
@@ -425,9 +428,9 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "without __type__" do
-    polymorphic? = true
-    reminder_module = get_module(Reminder, polymorphic?)
-    email_module = get_module(Channel.Email, polymorphic?)
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
+    email_module = get_module(Channel.Email, generator)
 
     attrs = %{
       date: ~U[2020-05-28 02:57:19Z],
@@ -455,13 +458,13 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "loading a nil embed" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
 
       insert_result =
         struct(reminder_module,
           date: ~U[2020-05-28 02:57:19Z],
-          text: "This is an Email reminder #{polymorphic?}",
+          text: "This is an Email reminder #{generator}",
           channel: nil
         )
         |> Repo.insert()
@@ -470,7 +473,7 @@ defmodule PolymorphicEmbedTest do
 
       reminder =
         reminder_module
-        |> QueryBuilder.where(text: "This is an Email reminder #{polymorphic?}")
+        |> QueryBuilder.where(text: "This is an Email reminder #{generator}")
         |> Repo.one()
 
       assert is_nil(reminder.channel)
@@ -478,12 +481,12 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "casting a nil embed" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
 
       attrs = %{
         date: ~U[2020-05-28 02:57:19Z],
-        text: "This is an Email reminder #{polymorphic?}",
+        text: "This is an Email reminder #{generator}",
         channel: nil
       }
 
@@ -496,7 +499,7 @@ defmodule PolymorphicEmbedTest do
 
       reminder =
         reminder_module
-        |> QueryBuilder.where(text: "This is an Email reminder #{polymorphic?}")
+        |> QueryBuilder.where(text: "This is an Email reminder #{generator}")
         |> Repo.one()
 
       assert is_nil(reminder.channel)
@@ -504,12 +507,12 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "required true" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
 
       sms_reminder_attrs = %{
         date: ~U[2020-05-28 02:57:19Z],
-        text: "This is an SMS reminder #{polymorphic?}",
+        text: "This is an SMS reminder #{generator}",
         channel: %{
           my_type_field: "sms",
           number: "02/807.05.53",
@@ -538,13 +541,13 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "custom changeset by passing MFA" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
-      sms_module = get_module(Channel.SMS, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+      sms_module = get_module(Channel.SMS, generator)
 
       sms_reminder_attrs = %{
         date: ~U[2020-05-28 02:57:19Z],
-        text: "This is an SMS reminder #{polymorphic?}",
+        text: "This is an SMS reminder #{generator}",
         channel: %{
           my_type_field: "sms",
           number: "02/807.05.53",
@@ -567,7 +570,7 @@ defmodule PolymorphicEmbedTest do
 
       reminder =
         reminder_module
-        |> QueryBuilder.where(text: "This is an SMS reminder #{polymorphic?}")
+        |> QueryBuilder.where(text: "This is an SMS reminder #{generator}")
         |> Repo.one()
 
       assert sms_module == reminder.channel.__struct__
@@ -575,13 +578,13 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "custom changeset by passing function" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
-      sms_module = get_module(Channel.SMS, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+      sms_module = get_module(Channel.SMS, generator)
 
       sms_reminder_attrs = %{
         date: ~U[2020-05-28 02:57:19Z],
-        text: "This is an SMS reminder #{polymorphic?}",
+        text: "This is an SMS reminder #{generator}",
         channel: %{
           my_type_field: "sms",
           number: "02/807.05.53",
@@ -604,7 +607,7 @@ defmodule PolymorphicEmbedTest do
 
       reminder =
         reminder_module
-        |> QueryBuilder.where(text: "This is an SMS reminder #{polymorphic?}")
+        |> QueryBuilder.where(text: "This is an SMS reminder #{generator}")
         |> Repo.one()
 
       assert sms_module == reminder.channel.__struct__
@@ -612,9 +615,9 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "with option but not for all" do
-    polymorphic? = true
-    reminder_module = get_module(Reminder, polymorphic?)
-    email_module = get_module(Channel.Email, polymorphic?)
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
+    email_module = get_module(Channel.Email, generator)
 
     sms_reminder_attrs = %{
       date: ~U[2020-05-28 02:57:19Z],
@@ -645,13 +648,13 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "setting embed to nil" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
-      sms_module = get_module(Channel.SMS, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+      sms_module = get_module(Channel.SMS, generator)
 
       attrs = %{
         date: ~U[2020-05-28 02:57:19Z],
-        text: "This is an SMS reminder #{polymorphic?}",
+        text: "This is an SMS reminder #{generator}",
         channel: nil
       }
 
@@ -670,7 +673,7 @@ defmodule PolymorphicEmbedTest do
 
       reminder =
         reminder_module
-        |> QueryBuilder.where(text: "This is an SMS reminder #{polymorphic?}")
+        |> QueryBuilder.where(text: "This is an SMS reminder #{generator}")
         |> Repo.one()
 
       assert is_nil(reminder.channel)
@@ -678,13 +681,13 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "omitting embed field in cast" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
-      sms_module = get_module(Channel.SMS, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+      sms_module = get_module(Channel.SMS, generator)
 
       attrs = %{
         date: ~U[2020-05-28 02:57:19Z],
-        text: "This is an Email reminder #{polymorphic?}"
+        text: "This is an Email reminder #{generator}"
       }
 
       insert_result =
@@ -701,7 +704,7 @@ defmodule PolymorphicEmbedTest do
 
       reminder =
         reminder_module
-        |> QueryBuilder.where(text: "This is an Email reminder #{polymorphic?}")
+        |> QueryBuilder.where(text: "This is an Email reminder #{generator}")
         |> Repo.one()
 
       refute is_nil(reminder.channel)
@@ -709,19 +712,19 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "keep existing data" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
-      sms_module = get_module(Channel.SMS, polymorphic?)
-      sms_provider_module = get_module(Channel.TwilioSMSProvider, polymorphic?)
-      sms_result_module = get_module(Channel.SMSResult, polymorphic?)
-      sms_attempts_module = get_module(Channel.SMSAttempts, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+      sms_module = get_module(Channel.SMS, generator)
+      sms_provider_module = get_module(Channel.TwilioSMSProvider, generator)
+      sms_result_module = get_module(Channel.SMSResult, generator)
+      sms_attempts_module = get_module(Channel.SMSAttempts, generator)
 
       struct(reminder_module, channel: struct(sms_module, country_code: 1))
 
       reminder =
         struct(reminder_module,
           date: ~U[2020-05-28 02:57:19Z],
-          text: "This is an SMS reminder #{polymorphic?}",
+          text: "This is an SMS reminder #{generator}",
           channel:
             struct(sms_module,
               provider:
@@ -758,7 +761,7 @@ defmodule PolymorphicEmbedTest do
 
       reminder =
         reminder_module
-        |> QueryBuilder.where(text: "This is an SMS reminder #{polymorphic?}")
+        |> QueryBuilder.where(text: "This is an SMS reminder #{generator}")
         |> Repo.one()
 
       assert reminder.channel.result.success
@@ -766,17 +769,17 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "params with string keys" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
-      sms_module = get_module(Channel.SMS, polymorphic?)
-      sms_provider_module = get_module(Channel.TwilioSMSProvider, polymorphic?)
-      sms_result_module = get_module(Channel.SMSResult, polymorphic?)
-      sms_attempts_module = get_module(Channel.SMSAttempts, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+      sms_module = get_module(Channel.SMS, generator)
+      sms_provider_module = get_module(Channel.TwilioSMSProvider, generator)
+      sms_result_module = get_module(Channel.SMSResult, generator)
+      sms_attempts_module = get_module(Channel.SMSAttempts, generator)
 
       reminder =
         struct(reminder_module,
           date: ~U[2020-05-28 02:57:19Z],
-          text: "This is an SMS reminder #{polymorphic?}",
+          text: "This is an SMS reminder #{generator}",
           channel:
             struct(sms_module,
               provider:
@@ -814,7 +817,7 @@ defmodule PolymorphicEmbedTest do
 
       reminder =
         reminder_module
-        |> QueryBuilder.where(text: "This is an SMS reminder #{polymorphic?}")
+        |> QueryBuilder.where(text: "This is an SMS reminder #{generator}")
         |> Repo.one()
 
       assert reminder.channel.result.success
@@ -822,8 +825,8 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "missing __type__ leads to changeset error" do
-    polymorphic? = true
-    reminder_module = get_module(Reminder, polymorphic?)
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
 
     sms_reminder_attrs = %{
       date: ~U[2020-05-28 02:57:19Z],
@@ -862,8 +865,8 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "missing __type__ nilifies" do
-    polymorphic? = true
-    reminder_module = get_module(Reminder, polymorphic?)
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
 
     sms_reminder_attrs = %{
       date: ~U[2020-05-28 02:57:19Z],
@@ -906,8 +909,8 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "missing __type__ leads to raising error" do
-    polymorphic? = true
-    reminder_module = get_module(Reminder, polymorphic?)
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
 
     sms_reminder_attrs = %{
       date: ~U[2020-05-28 02:57:19Z],
@@ -945,9 +948,9 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "cannot load the right struct" do
-    polymorphic? = true
-    reminder_module = get_module(Reminder, polymorphic?)
-    sms_module = get_module(Channel.SMS, polymorphic?)
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
+    sms_module = get_module(Channel.SMS, generator)
 
     struct(reminder_module,
       date: ~U[2020-05-28 02:57:19Z],
@@ -974,9 +977,9 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "changing type" do
-    polymorphic? = true
-    reminder_module = get_module(Reminder, polymorphic?)
-    sms_module = get_module(Channel.SMS, polymorphic?)
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
+    sms_module = get_module(Channel.SMS, generator)
 
     attrs = %{
       date: ~U[2020-05-28 02:57:19Z],
@@ -1026,15 +1029,15 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "supports lists of polymorphic embeds" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
-      device_module = get_module(Reminder.Context.Device, polymorphic?)
-      age_module = get_module(Reminder.Context.Age, polymorphic?)
-      location_module = get_module(Reminder.Context.Location, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+      device_module = get_module(Reminder.Context.Device, generator)
+      age_module = get_module(Reminder.Context.Age, generator)
+      location_module = get_module(Reminder.Context.Location, generator)
 
       attrs = %{
         date: ~U[2020-05-28 02:57:19Z],
-        text: "This is a reminder with multiple contexts #{polymorphic?}",
+        text: "This is a reminder with multiple contexts #{generator}",
         channel: %{
           my_type_field: "sms",
           number: "02/807.05.53",
@@ -1065,12 +1068,12 @@ defmodule PolymorphicEmbedTest do
 
       reminder =
         reminder_module
-        |> QueryBuilder.where(text: "This is a reminder with multiple contexts #{polymorphic?}")
+        |> QueryBuilder.where(text: "This is a reminder with multiple contexts #{generator}")
         |> Repo.one()
 
       assert reminder.contexts |> length() == 2
 
-      if polymorphic? do
+      if polymorphic?(generator) do
         assert [
                  struct(device_module,
                    id: "12345",
@@ -1090,8 +1093,8 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "validates lists of polymorphic embeds" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
 
       attrs = %{
         date: ~U[2020-05-28 02:57:19Z],
@@ -1112,7 +1115,7 @@ defmodule PolymorphicEmbedTest do
         |> reminder_module.changeset(attrs)
         |> Repo.insert()
 
-      if polymorphic? do
+      if polymorphic?(generator) do
         assert {:error, %Ecto.Changeset{valid?: false, errors: [contexts: {"is invalid", _}]}} =
                  insert_result
       else
@@ -1127,7 +1130,7 @@ defmodule PolymorphicEmbedTest do
         assert %{address: {"can't be blank", [validation: :required]}} = Map.new(location_errors)
       end
 
-      if polymorphic? do
+      if polymorphic?(generator) do
         attrs = %{
           date: ~U[2020-05-28 02:57:19Z],
           text: "This is a reminder with multiple contexts",
@@ -1190,12 +1193,12 @@ defmodule PolymorphicEmbedTest do
         assert [] = errors
         assert %{type: {"can't be blank", [validation: :required]}} = Map.new(device_errors)
 
-        device_module = get_module(Reminder.Context.Device, polymorphic?)
+        device_module = get_module(Reminder.Context.Device, generator)
 
         reminder =
           struct(reminder_module,
             date: ~U[2020-05-28 02:57:19Z],
-            text: "This is an SMS reminder #{polymorphic?}",
+            text: "This is an SMS reminder #{generator}",
             constexts: [
               struct(device_module, id: "12345")
             ]
@@ -1235,7 +1238,7 @@ defmodule PolymorphicEmbedTest do
 
   describe "polymorphic_embed_inputs_for/2" do
     test "generates forms that can be rendered" do
-      reminder_module = get_module(Reminder, true)
+      reminder_module = get_module(Reminder, :polymorphic)
 
       attrs = %{
         date: ~U[2020-05-28 02:57:19Z],
@@ -1269,8 +1272,8 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "inputs_for/4" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
 
       attrs = %{
         date: ~U[2020-05-28 02:57:19Z],
@@ -1287,14 +1290,14 @@ defmodule PolymorphicEmbedTest do
         |> reminder_module.changeset(attrs)
 
       contents =
-        safe_inputs_for(changeset, :channel, :email, polymorphic?, fn f ->
+        safe_inputs_for(changeset, :channel, :email, generator, fn f ->
           assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
           assert f.errors == []
           text_input(f, :address)
         end)
 
       expected_contents =
-        if(polymorphic?,
+        if(polymorphic?(generator),
           do:
             ~s(<input id="reminder_channel___type__" name="reminder[channel][__type__]" type="hidden" value="email"><input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">),
           else:
@@ -1308,7 +1311,7 @@ defmodule PolymorphicEmbedTest do
           Map.put(changeset, :action, :insert),
           :channel,
           :email,
-          polymorphic?,
+          generator,
           fn f ->
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
             text_input(f, :address)
@@ -1316,7 +1319,7 @@ defmodule PolymorphicEmbedTest do
         )
 
       expected_contents =
-        if(polymorphic?,
+        if(polymorphic?(generator),
           do:
             ~s(<input id="reminder_channel___type__" name="reminder[channel][__type__]" type="hidden" value="email"><input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">),
           else:
@@ -1328,8 +1331,8 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "inputs_for/4 after invalid insert" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
 
       attrs = %{
         date: ~U[2020-05-28 02:57:19Z],
@@ -1346,7 +1349,7 @@ defmodule PolymorphicEmbedTest do
         |> Repo.insert()
 
       contents =
-        safe_inputs_for(changeset, :channel, :sms, polymorphic?, fn f ->
+        safe_inputs_for(changeset, :channel, :sms, generator, fn f ->
           assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
           assert %{
@@ -1358,7 +1361,7 @@ defmodule PolymorphicEmbedTest do
         end)
 
       expected_contents =
-        if(polymorphic?,
+        if(polymorphic?(generator),
           do:
             ~s(<input id="reminder_channel___type__" name="reminder[channel][__type__]" type="hidden" value="sms"><input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="1">),
           else:
@@ -1372,7 +1375,7 @@ defmodule PolymorphicEmbedTest do
           Map.put(changeset, :action, :insert),
           :channel,
           :sms,
-          polymorphic?,
+          generator,
           fn f ->
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
             text_input(f, :number)
@@ -1380,7 +1383,7 @@ defmodule PolymorphicEmbedTest do
         )
 
       expected_contents =
-        if(polymorphic?,
+        if(polymorphic?(generator),
           do:
             ~s(<input id="reminder_channel___type__" name="reminder[channel][__type__]" type="hidden" value="sms"><input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="1">),
           else:
@@ -1392,8 +1395,8 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "inputs_for/4 after invalid insert with valid nested struct" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
 
       attrs = %{
         text: "This is an SMS reminder",
@@ -1415,7 +1418,7 @@ defmodule PolymorphicEmbedTest do
 
       assert match?(
                content when is_binary(content),
-               safe_inputs_for(changeset, :channel, :sms, polymorphic?, fn f ->
+               safe_inputs_for(changeset, :channel, :sms, generator, fn f ->
                  assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
                  assert %{} = Map.new(f.errors)
@@ -1427,8 +1430,8 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "errors in form for polymorphic embed and nested embed" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
 
       sms_reminder_attrs = %{
         text: "This is an SMS reminder",
@@ -1454,7 +1457,8 @@ defmodule PolymorphicEmbedTest do
       }
 
       changeset =
-        struct(reminder_module)
+        reminder_module
+        |> struct()
         |> reminder_module.changeset(sms_reminder_attrs)
 
       changeset = %{changeset | action: :insert}
@@ -1463,7 +1467,7 @@ defmodule PolymorphicEmbedTest do
         assert f.errors == [date: {"can't be blank", [validation: :required]}]
 
         contents =
-          safe_inputs_for(changeset, :channel, :sms, polymorphic?, fn f ->
+          safe_inputs_for(changeset, :channel, :sms, generator, fn f ->
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
             assert f.errors == [
@@ -1473,23 +1477,23 @@ defmodule PolymorphicEmbedTest do
                    ]
 
             contents =
-              safe_inputs_for(f.source, :result, nil, false, fn f ->
+              safe_inputs_for(f.source, :result, nil, :not_polymorphic, fn f ->
                 assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
                 assert f.errors == [success: {"can't be blank", [validation: :required]}]
 
-                "from safe_inputs_for #{polymorphic?}"
+                "from safe_inputs_for #{generator}"
               end)
 
-            assert contents =~ "from safe_inputs_for #{polymorphic?}"
+            assert contents =~ "from safe_inputs_for #{generator}"
 
-            "from safe_inputs_for #{polymorphic?}"
+            "from safe_inputs_for #{generator}"
           end)
 
-        assert contents =~ "from safe_inputs_for #{polymorphic?}"
+        assert contents =~ "from safe_inputs_for #{generator}"
 
         contents =
-          safe_inputs_for(changeset, :contexts, :location, polymorphic?, fn %{index: index} = f ->
+          safe_inputs_for(changeset, :contexts, :location, generator, fn %{index: index} = f ->
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
             if index == 0 do
@@ -1499,7 +1503,7 @@ defmodule PolymorphicEmbedTest do
             end
 
             contents =
-              safe_inputs_for(f.source, :country, nil, false, fn f ->
+              safe_inputs_for(f.source, :country, nil, :not_polymorphic, fn f ->
                 assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
                 if index == 0 do
@@ -1512,15 +1516,15 @@ defmodule PolymorphicEmbedTest do
                   assert f.errors == []
                 end
 
-                "from safe_inputs_for #{polymorphic?}"
+                "from safe_inputs_for #{generator}"
               end)
 
-            assert contents =~ "from safe_inputs_for #{polymorphic?}"
+            assert contents =~ "from safe_inputs_for #{generator}"
 
-            "from safe_inputs_for #{polymorphic?}"
+            "from safe_inputs_for #{generator}"
           end)
 
-        assert contents =~ "from safe_inputs_for #{polymorphic?}"
+        assert contents =~ "from safe_inputs_for #{generator}"
 
         1
       end)
@@ -1528,8 +1532,8 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "keep changes in embeds_one (nested into a polymorphic embed) when invalid changeset" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
 
       sms_reminder_attrs = %{
         text: "This is an SMS reminder",
@@ -1551,9 +1555,9 @@ defmodule PolymorphicEmbedTest do
         assert f.errors == [date: {"can't be blank", [validation: :required]}]
 
         contents =
-          safe_inputs_for(changeset, :channel, :sms, polymorphic?, fn f ->
+          safe_inputs_for(changeset, :channel, :sms, generator, fn f ->
             contents =
-              safe_inputs_for(f.source, :result, nil, false, fn f ->
+              safe_inputs_for(f.source, :result, nil, :not_polymorphic, fn f ->
                 text_input(f, :success)
               end)
 
@@ -1562,10 +1566,10 @@ defmodule PolymorphicEmbedTest do
 
             assert contents == expected_contents
 
-            "from safe_inputs_for #{polymorphic?}"
+            "from safe_inputs_for #{generator}"
           end)
 
-        assert contents =~ "from safe_inputs_for #{polymorphic?}"
+        assert contents =~ "from safe_inputs_for #{generator}"
 
         1
       end)
@@ -1573,8 +1577,8 @@ defmodule PolymorphicEmbedTest do
   end
 
   test "form with polymorphic embed to nil" do
-    for polymorphic? <- [false, true] do
-      reminder_module = get_module(Reminder, polymorphic?)
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
 
       sms_reminder_attrs = %{
         text: "This is an SMS reminder",
@@ -1592,17 +1596,24 @@ defmodule PolymorphicEmbedTest do
         assert f.errors == [date: {"can't be blank", [validation: :required]}]
 
         contents =
-          safe_inputs_for(changeset, :channel, :sms, polymorphic?, fn f ->
+          safe_inputs_for(changeset, :channel, :sms, generator, fn f ->
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
             assert f.errors == []
 
-            "from safe_inputs_for #{polymorphic?}"
+            "from safe_inputs_for #{generator}"
           end)
 
-        assert contents =~ "from safe_inputs_for #{polymorphic?}"
+        expected =
+          case generator do
+            :polymorphic -> ""
+            :polymorphic_with_type -> "from safe_inputs_for #{generator}"
+            :not_polymorphic -> "from safe_inputs_for #{generator}"
+          end
+
+        assert contents =~ expected
 
         contents =
-          safe_inputs_for(changeset, :contexts, :location, polymorphic?, fn f ->
+          safe_inputs_for(changeset, :contexts, :location, generator, fn f ->
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
             assert f.errors == []
 
@@ -1611,7 +1622,7 @@ defmodule PolymorphicEmbedTest do
               assert f.errors == []
             end)
 
-            "from safe_inputs_for #{polymorphic?}"
+            "from safe_inputs_for #{generator}"
           end)
 
         assert contents == ""
@@ -1644,7 +1655,7 @@ defmodule PolymorphicEmbedTest do
 
   describe "Form.get_polymorphic_type/3" do
     test "returns type from changeset" do
-      reminder_module = get_module(Reminder, true)
+      reminder_module = get_module(Reminder, :polymorphic)
 
       attrs = %{
         date: ~U[2020-05-28 02:57:19Z],
@@ -1670,7 +1681,7 @@ defmodule PolymorphicEmbedTest do
     end
 
     test "returns type from struct" do
-      reminder_module = get_module(Reminder, true)
+      reminder_module = get_module(Reminder, :polymorphic)
 
       channel = %PolymorphicEmbed.Channel.Email{
         address: "a",
@@ -1693,7 +1704,7 @@ defmodule PolymorphicEmbedTest do
     end
 
     test "returns type from string parameters" do
-      reminder_module = get_module(Reminder, true)
+      reminder_module = get_module(Reminder, :polymorphic)
       attrs = %{"channel" => %{"__type__" => "email"}}
 
       changeset =
@@ -1710,7 +1721,7 @@ defmodule PolymorphicEmbedTest do
     end
 
     test "returns type from atom parameters" do
-      reminder_module = get_module(Reminder, true)
+      reminder_module = get_module(Reminder, :polymorphic)
       attrs = %{channel: %{__type__: :email}}
 
       changeset =
@@ -1727,7 +1738,7 @@ defmodule PolymorphicEmbedTest do
     end
 
     test "returns nil without source struct and __type__ parameter" do
-      reminder_module = get_module(Reminder, true)
+      reminder_module = get_module(Reminder, :polymorphic)
 
       changeset =
         reminder_module
@@ -1757,14 +1768,15 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
-  defp safe_inputs_for(changeset, field, type, polymorphic?, fun) do
+  defp safe_inputs_for(changeset, field, type, generator, fun) when generator in @generators do
     mark = "--PLACEHOLDER--"
 
     inputs_for_fun =
-      if(polymorphic?,
-        do: fn f -> polymorphic_embed_inputs_for(f, field, type, fun) end,
-        else: fn f -> inputs_for(f, field, fun) end
-      )
+      case generator do
+        :polymorphic_with_type -> fn f -> polymorphic_embed_inputs_for(f, field, type, fun) end
+        :polymorphic -> fn f -> polymorphic_embed_inputs_for(f, field, fun) end
+        :not_polymorphic -> fn f -> inputs_for(f, field, fun) end
+      end
 
     contents =
       safe_to_string(
@@ -1794,4 +1806,8 @@ defmodule PolymorphicEmbedTest do
     </.form>
     """
   end
+
+  defp polymorphic?(:polymorphic_with_type), do: true
+  defp polymorphic?(:polymorphic), do: true
+  defp polymorphic?(:not_polymorphic), do: false
 end
