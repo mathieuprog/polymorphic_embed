@@ -198,7 +198,7 @@ defmodule PolymorphicEmbedTest do
                           valid?: false,
                           errors: country_errors
                         }
-                      },
+                      }
                     },
                     %{
                       action: :insert,
@@ -210,10 +210,10 @@ defmodule PolymorphicEmbedTest do
               }} = insert_result
 
       assert %{
-        number: {"can't be blank", [validation: :required]},
-        country_code: {"can't be blank", [validation: :required]},
-        provider: {"can't be blank", [validation: :required]}
-      } = Map.new(channel_errors)
+               number: {"can't be blank", [validation: :required]},
+               country_code: {"can't be blank", [validation: :required]},
+               provider: {"can't be blank", [validation: :required]}
+             } = Map.new(channel_errors)
 
       assert [date: {"can't be blank", [validation: :required]}] = changeset.errors
       assert [date: {"can't be blank", [validation: :required]}] = errors
@@ -238,12 +238,14 @@ defmodule PolymorphicEmbedTest do
         contexts: [%{country: %{name: ["can't be blank"]}}, %{address: ["can't be blank"]}],
         date: ["can't be blank"]
       } =
-        traverse_errors_fun.(changeset,
+        traverse_errors_fun.(
+          changeset,
           fn {msg, opts} ->
             Enum.reduce(opts, msg, fn {key, value}, acc ->
-            String.replace(acc, "%{#{key}}", to_string(value))
-          end)
-        end)
+              String.replace(acc, "%{#{key}}", to_string(value))
+            end)
+          end
+        )
     end
   end
 
@@ -1149,9 +1151,13 @@ defmodule PolymorphicEmbedTest do
           |> Repo.insert()
 
         assert {:ok,
-          %{contexts2: [%{
-            age: "aquarius"
-          }]}} = insert_result
+                %{
+                  contexts2: [
+                    %{
+                      age: "aquarius"
+                    }
+                  ]
+                }} = insert_result
 
         attrs = %{
           date: ~U[2020-05-28 02:57:19Z],
@@ -1461,10 +1467,10 @@ defmodule PolymorphicEmbedTest do
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
             assert f.errors == [
-              number: {"can't be blank", [validation: :required]},
-              country_code: {"can't be blank", [validation: :required]},
-              provider: {"can't be blank", [validation: :required]}
-            ]
+                     number: {"can't be blank", [validation: :required]},
+                     country_code: {"can't be blank", [validation: :required]},
+                     provider: {"can't be blank", [validation: :required]}
+                   ]
 
             contents =
               safe_inputs_for(f.source, :result, nil, false, fn f ->
@@ -1497,7 +1503,11 @@ defmodule PolymorphicEmbedTest do
                 assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
                 if index == 0 do
-                  assert f.errors == [name: {"should be at least %{count} character(s)", [count: 3, validation: :length, kind: :min, type: :string]}]
+                  assert f.errors == [
+                           name:
+                             {"should be at least %{count} character(s)",
+                              [count: 3, validation: :length, kind: :min, type: :string]}
+                         ]
                 else
                   assert f.errors == []
                 end
@@ -1505,7 +1515,7 @@ defmodule PolymorphicEmbedTest do
                 "from safe_inputs_for #{polymorphic?}"
               end)
 
-              assert contents =~ "from safe_inputs_for #{polymorphic?}"
+            assert contents =~ "from safe_inputs_for #{polymorphic?}"
 
             "from safe_inputs_for #{polymorphic?}"
           end)
@@ -1542,7 +1552,6 @@ defmodule PolymorphicEmbedTest do
 
         contents =
           safe_inputs_for(changeset, :channel, :sms, polymorphic?, fn f ->
-
             contents =
               safe_inputs_for(f.source, :result, nil, false, fn f ->
                 text_input(f, :success)
@@ -1629,8 +1638,7 @@ defmodule PolymorphicEmbedTest do
                  address: "what",
                  confirmed: true
                }
-             ) ==
-               :email
+             ) == :email
     end
   end
 

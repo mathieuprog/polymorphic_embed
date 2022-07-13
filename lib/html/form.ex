@@ -96,19 +96,19 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
         params = Enum.at(params, i) || %{}
 
         changeset =
-          Ecto.Changeset.change(data)
+          data
+          |> Ecto.Changeset.change()
           |> apply_action(parent_action)
 
         errors = get_errors(changeset)
 
-        changeset =
-          %Ecto.Changeset{
-            changeset
-            | action: parent_action,
-              params: params,
-              errors: errors,
-              valid?: errors == []
-          }
+        changeset = %Ecto.Changeset{
+          changeset
+          | action: parent_action,
+            params: params,
+            errors: errors,
+            valid?: errors == []
+        }
 
         %Phoenix.HTML.Form{
           source: changeset,
