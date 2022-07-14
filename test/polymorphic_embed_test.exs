@@ -1595,6 +1595,16 @@ defmodule PolymorphicEmbedTest do
 
         contents =
           safe_inputs_for(changeset, :channel, generator, fn f ->
+            contents =
+              safe_inputs_for(f.source, :result, generator, fn f ->
+                text_input(f, :success)
+              end)
+
+              expected_contents =
+                ~s(<input id="sms_result_success" name="sms[result][success]" type="text">)
+
+              assert contents == expected_contents
+
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
             assert f.errors == []
 
@@ -1627,6 +1637,45 @@ defmodule PolymorphicEmbedTest do
         1
       end)
     end
+  end
+
+  test "form with polymorphic embed to nil and given type" do
+    reminder_module = get_module(Reminder, :polymorphic)
+
+    sms_reminder_attrs = %{
+      text: "This is an SMS reminder",
+      channel: nil,
+      contexts: []
+    }
+
+    changeset =
+      struct(reminder_module)
+      |> reminder_module.changeset(sms_reminder_attrs)
+
+    changeset = %{changeset | action: :insert}
+
+    safe_form_for(changeset, fn _f ->
+      contents =
+        safe_inputs_for(changeset, :channel, :sms, :polymorphic_with_type, fn f ->
+          contents =
+            safe_inputs_for(f.source, :result, :not_polymorphic, fn f ->
+              text_input(f, :success)
+            end)
+
+            expected_contents =
+              ~s(<input id="sms_result_success" name="sms[result][success]" type="text">)
+
+            assert contents == expected_contents
+
+          assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+          assert f.errors == []
+
+          "from safe_inputs_for"
+        end)
+
+      assert contents =~ "from safe_inputs_for"
+      1
+    end)
   end
 
   describe "get_polymorphic_type/3" do
@@ -1765,13 +1814,14 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
-  defp safe_inputs_for(changeset, field, generator, fun) when generator in @generators do
+  defp safe_inputs_for(changeset, field, embed_type \\ nil, test_type, fun) do
     mark = "--PLACEHOLDER--"
 
     inputs_for_fun =
-      case generator do
-        :polymorphic -> fn f -> polymorphic_embed_inputs_for(f, field, fun) end
+      case test_type do
         :not_polymorphic -> fn f -> inputs_for(f, field, fun) end
+        :polymorphic -> fn f -> polymorphic_embed_inputs_for(f, field, fun) end
+        :polymorphic_with_type -> fn f -> polymorphic_embed_inputs_for(f, field, embed_type, fun) end
       end
 
     contents =
