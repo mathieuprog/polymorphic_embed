@@ -1290,7 +1290,7 @@ defmodule PolymorphicEmbedTest do
         |> reminder_module.changeset(attrs)
 
       contents =
-        safe_inputs_for(changeset, :channel, :email, generator, fn f ->
+        safe_inputs_for(changeset, :channel, generator, fn f ->
           assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
           assert f.errors == []
           text_input(f, :address)
@@ -1310,7 +1310,6 @@ defmodule PolymorphicEmbedTest do
         safe_inputs_for(
           Map.put(changeset, :action, :insert),
           :channel,
-          :email,
           generator,
           fn f ->
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
@@ -1349,7 +1348,7 @@ defmodule PolymorphicEmbedTest do
         |> Repo.insert()
 
       contents =
-        safe_inputs_for(changeset, :channel, :sms, generator, fn f ->
+        safe_inputs_for(changeset, :channel, generator, fn f ->
           assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
           assert %{
@@ -1374,7 +1373,6 @@ defmodule PolymorphicEmbedTest do
         safe_inputs_for(
           Map.put(changeset, :action, :insert),
           :channel,
-          :sms,
           generator,
           fn f ->
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
@@ -1418,7 +1416,7 @@ defmodule PolymorphicEmbedTest do
 
       assert match?(
                content when is_binary(content),
-               safe_inputs_for(changeset, :channel, :sms, generator, fn f ->
+               safe_inputs_for(changeset, :channel, generator, fn f ->
                  assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
                  assert %{} = Map.new(f.errors)
@@ -1467,7 +1465,7 @@ defmodule PolymorphicEmbedTest do
         assert f.errors == [date: {"can't be blank", [validation: :required]}]
 
         contents =
-          safe_inputs_for(changeset, :channel, :sms, generator, fn f ->
+          safe_inputs_for(changeset, :channel, generator, fn f ->
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
             assert f.errors == [
@@ -1477,7 +1475,7 @@ defmodule PolymorphicEmbedTest do
                    ]
 
             contents =
-              safe_inputs_for(f.source, :result, nil, :not_polymorphic, fn f ->
+              safe_inputs_for(f.source, :result, :not_polymorphic, fn f ->
                 assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
                 assert f.errors == [success: {"can't be blank", [validation: :required]}]
@@ -1493,7 +1491,7 @@ defmodule PolymorphicEmbedTest do
         assert contents =~ "from safe_inputs_for #{generator}"
 
         contents =
-          safe_inputs_for(changeset, :contexts, :location, generator, fn %{index: index} = f ->
+          safe_inputs_for(changeset, :contexts, generator, fn %{index: index} = f ->
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
             if index == 0 do
@@ -1503,7 +1501,7 @@ defmodule PolymorphicEmbedTest do
             end
 
             contents =
-              safe_inputs_for(f.source, :country, nil, :not_polymorphic, fn f ->
+              safe_inputs_for(f.source, :country, :not_polymorphic, fn f ->
                 assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
 
                 if index == 0 do
@@ -1555,9 +1553,9 @@ defmodule PolymorphicEmbedTest do
         assert f.errors == [date: {"can't be blank", [validation: :required]}]
 
         contents =
-          safe_inputs_for(changeset, :channel, :sms, generator, fn f ->
+          safe_inputs_for(changeset, :channel, generator, fn f ->
             contents =
-              safe_inputs_for(f.source, :result, nil, :not_polymorphic, fn f ->
+              safe_inputs_for(f.source, :result, :not_polymorphic, fn f ->
                 text_input(f, :success)
               end)
 
@@ -1596,7 +1594,7 @@ defmodule PolymorphicEmbedTest do
         assert f.errors == [date: {"can't be blank", [validation: :required]}]
 
         contents =
-          safe_inputs_for(changeset, :channel, :sms, generator, fn f ->
+          safe_inputs_for(changeset, :channel, generator, fn f ->
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
             assert f.errors == []
 
@@ -1612,11 +1610,11 @@ defmodule PolymorphicEmbedTest do
         assert contents =~ expected
 
         contents =
-          safe_inputs_for(changeset, :contexts, :location, generator, fn f ->
+          safe_inputs_for(changeset, :contexts, generator, fn f ->
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
             assert f.errors == []
 
-            safe_inputs_for(f.source, :country, nil, false, fn f ->
+            safe_inputs_for(f.source, :country, false, fn f ->
               assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
               assert f.errors == []
             end)
@@ -1767,7 +1765,7 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
-  defp safe_inputs_for(changeset, field, type, generator, fun) when generator in @generators do
+  defp safe_inputs_for(changeset, field, generator, fun) when generator in @generators do
     mark = "--PLACEHOLDER--"
 
     inputs_for_fun =
