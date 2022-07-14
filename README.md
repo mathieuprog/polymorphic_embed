@@ -174,7 +174,7 @@ def view do
 end
 ```
 
-This provides you with a `polymorphic_embed_inputs_for/4` function.
+This provides you with the `polymorphic_embed_inputs_for/3` and `polymorphic_embed_inputs_for/4` functions.
 
 Here is an example form using the imported function:
 
@@ -192,7 +192,40 @@ Here is an example form using the imported function:
 <% end %>
 ```
 
-`polymorphic_embed_inputs_for/4` also renders a hidden input for the `"__type__"` field.
+When using `polymorphic_embed_inputs_for/4`, you have to manually specify the type. When the embed is `nil`, empty fields will be displayed.
+
+`polymorphic_embed_inputs_for/3` doesn't require the type to be specified. When the embed is `nil`, no fields are displayed.
+
+They both render a hidden input for the `"__type__"` field.
+
+### Displaying form inputs and errors in LiveView
+
+You may use `polymorphic_embed_inputs_for/2` when working with LiveView.
+
+```elixir
+<.form
+  let={f}
+  for={@changeset}
+  id="reminder-form"
+  phx-change="validate"
+  phx-submit="save"
+>
+  <%= for channel_form <- polymorphic_embed_inputs_for f, :channel do %>
+    <%= hidden_inputs_for(channel_form) %>
+
+    <%= case get_polymorphic_type(channel_form, Reminder, :channel) do %>
+      <% :sms -> %>
+        <%= label channel_form, :number %>
+        <%= text_input channel_form, :number %>
+
+      <% :email -> %>
+        <%= label channel_form, :email %>
+        <%= text_input channel_form, :email %>
+  <% end %>
+</.form>
+```
+
+Using this function, you have to render the necessary hidden inputs manually as shown above.
 
 ### Get the type of a polymorphic embed
 
