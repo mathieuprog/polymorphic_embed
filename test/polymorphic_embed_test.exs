@@ -10,13 +10,13 @@ defmodule PolymorphicEmbedTest do
 
   alias PolymorphicEmbed.Repo
 
-  @generators [:not_polymorphic, :polymorphic, :polymorphic_with_type]
+  @generators [:not_polymorphic, :polymorphic]
 
   setup do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Repo)
   end
 
-  defp get_module(name, generator) when generator in [:polymorphic, :polymorphic_with_type],
+  defp get_module(name, :polymorphic),
     do: Module.concat([PolymorphicEmbed, name])
 
   defp get_module(name, :not_polymorphic),
@@ -1606,7 +1606,6 @@ defmodule PolymorphicEmbedTest do
         expected =
           case generator do
             :polymorphic -> ""
-            :polymorphic_with_type -> "from safe_inputs_for #{generator}"
             :not_polymorphic -> "from safe_inputs_for #{generator}"
           end
 
@@ -1773,7 +1772,6 @@ defmodule PolymorphicEmbedTest do
 
     inputs_for_fun =
       case generator do
-        :polymorphic_with_type -> fn f -> polymorphic_embed_inputs_for(f, field, type, fun) end
         :polymorphic -> fn f -> polymorphic_embed_inputs_for(f, field, fun) end
         :not_polymorphic -> fn f -> inputs_for(f, field, fun) end
       end
@@ -1807,7 +1805,6 @@ defmodule PolymorphicEmbedTest do
     """
   end
 
-  defp polymorphic?(:polymorphic_with_type), do: true
   defp polymorphic?(:polymorphic), do: true
   defp polymorphic?(:not_polymorphic), do: false
 end
