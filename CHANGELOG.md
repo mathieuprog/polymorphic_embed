@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.10.x
+
+  * Add `polymorphic_embed_inputs_for/2` for displaying forms in LiveView
+  * Add `polymorphic_embed_inputs_for/3` for displaying forms in Phoenix templates without
+    needing to specify the type
+
 ## 1.9.x
 
   * Add `PolymorphicEmbed.types/2` function returning the possible types for a polymorphic field
