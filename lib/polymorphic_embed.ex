@@ -13,7 +13,8 @@ defmodule PolymorphicEmbed do
     end
 
     types_metadata =
-      Keyword.fetch!(opts, :types)
+      opts
+      |> Keyword.fetch!(:types)
       |> Enum.map(fn
         {type_name, type_opts} when is_list(type_opts) ->
           {type_name, type_opts}
@@ -24,10 +25,10 @@ defmodule PolymorphicEmbed do
       |> Enum.map(fn
         {type_name, type_opts} ->
           %{
-            type: type_name |> to_string(),
+            type: to_string(type_name),
             module: Keyword.fetch!(type_opts, :module),
             identify_by_fields:
-              Keyword.get(type_opts, :identify_by_fields, []) |> Enum.map(&to_string/1)
+              type_opts |> Keyword.get(:identify_by_fields, []) |> Enum.map(&to_string/1)
           }
       end)
 
@@ -254,7 +255,8 @@ defmodule PolymorphicEmbed do
 
   def load(data, loader, params) when is_map(data), do: do_load(data, loader, params)
 
-  def load(data, loader, params) when is_binary(data), do: do_load(Jason.decode!(data), loader, params)
+  def load(data, loader, params) when is_binary(data),
+    do: do_load(Jason.decode!(data), loader, params)
 
   def do_load(data, _loader, %{types_metadata: types_metadata, type_field: type_field}) do
     case do_get_polymorphic_module_from_map(data, type_field, types_metadata) do
@@ -375,8 +377,8 @@ defmodule PolymorphicEmbed do
 
   def traverse_errors(%Ecto.Changeset{changes: changes, types: types} = changeset, msg_func)
       when is_function(msg_func, 1) or is_function(msg_func, 3) do
-
-    Ecto.Changeset.traverse_errors(changeset, msg_func)
+    changeset
+    |> Ecto.Changeset.traverse_errors(msg_func)
     |> merge_polymorphic_keys(changes, types, msg_func)
   end
 
@@ -389,7 +391,7 @@ defmodule PolymorphicEmbed do
   end
 
   defp merge_polymorphic_keys(map, changes, types, msg_func) do
-    Enum.reduce types, map, fn
+    Enum.reduce(types, map, fn
       {field, {:parameterized, PolymorphicEmbed, _opts}}, acc ->
         if changeset = Map.get(changes, field) do
           case traverse_errors(changeset, msg_func) do
@@ -409,15 +411,15 @@ defmodule PolymorphicEmbed do
             end)
 
           case all_empty? do
-            true  -> acc
+            true -> acc
             false -> Map.put(acc, field, errors)
           end
         else
           acc
         end
 
-     {_, _}, acc ->
-      acc
-    end
+      {_, _}, acc ->
+        acc
+    end)
   end
 end
