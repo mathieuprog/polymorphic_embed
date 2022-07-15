@@ -30,15 +30,15 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
 
     @doc """
     Generates a new form builder without an anonymous function.
-
+    
     Similarly to `Phoenix.HTML.Form.inputs_for/3`, this function exists for
     integration with `Phoenix.LiveView`.
-
+    
     Unlike `polymorphic_embed_inputs_for/4`, this function does not generate
     hidden inputs.
-
+    
     ## Example
-
+    
         <.form
           let={f}
           for={@changeset}
@@ -48,12 +48,12 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
         >
           <%= for channel_form <- polymorphic_embed_inputs_for f, :channel do %>
             <%= hidden_inputs_for(channel_form) %>
-
+    
             <%= case get_polymorphic_type(channel_form, Reminder, :channel) do %>
               <% :sms -> %>
                 <%= label channel_form, :number %>
                 <%= text_input channel_form, :number %>
-
+    
               <% :email -> %>
                 <%= label channel_form, :email %>
                 <%= text_input channel_form, :email %>
@@ -71,27 +71,27 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
     @doc """
     Like `polymorphic_embed_inputs_for/4`, but determines the type from the
     form data.
-
+    
     ## Example
-
+    
         <%= inputs_for f, :reminders, fn reminder_form -> %>
           <%= polymorphic_embed_inputs_for reminder_form, :channel, fn channel_form -> %>
             <%= case get_polymorphic_type(channel_form, Reminder, :channel) do %>
               <% :sms -> %>
                 <%= label poly_form, :number %>
                 <%= text_input poly_form, :number %>
-
+    
               <% :email -> %>
                 <%= label poly_form, :email %>
                 <%= text_input poly_form, :email %>
             <% end %>
           <% end %>
         <% end %>
-
+    
     While `polymorphic_embed_inputs_for/4` renders empty fields if the data is
     `nil`, this function does not. Instead, you can initialize your changeset
     to render an empty fieldset:
-
+    
         changeset = reminder_changeset(
           %Reminder{},
           %{"channel" => %{"__type__" => "sms"}}
