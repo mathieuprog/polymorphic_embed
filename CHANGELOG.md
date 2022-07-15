@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.x
+
+  * Support IDs
+
+### Migration from 1.x to 2.x
+
+  * Make sure that every existing polymorphic `embedded_schema` contains the setting `@primary_key false`
+
 ## 1.10.x
 
   * Add `polymorphic_embed_inputs_for/2` for displaying forms in LiveView
