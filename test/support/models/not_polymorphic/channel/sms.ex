@@ -2,8 +2,6 @@ defmodule PolymorphicEmbed.Regular.Channel.SMS do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @primary_key false
-
   embedded_schema do
     field(:number, :string)
     field(:country_code, :integer)
@@ -12,8 +10,8 @@ defmodule PolymorphicEmbed.Regular.Channel.SMS do
 
     embeds_one(:provider, PolymorphicEmbed.Regular.Channel.TwilioSMSProvider, on_replace: :update)
 
-    embeds_one(:result, PolymorphicEmbed.Regular.Channel.SMSResult)
-    embeds_many(:attempts, PolymorphicEmbed.Regular.Channel.SMSAttempts)
+    embeds_one(:result, PolymorphicEmbed.Regular.Channel.SMSResult, on_replace: :update)
+    embeds_many(:attempts, PolymorphicEmbed.Regular.Channel.SMSAttempts, on_replace: :delete)
   end
 
   def changeset(struct, attrs) do

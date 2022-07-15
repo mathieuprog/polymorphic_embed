@@ -3,8 +3,6 @@ defmodule PolymorphicEmbed.Channel.SMS do
   import Ecto.Changeset
   import PolymorphicEmbed, only: [cast_polymorphic_embed: 3]
 
-  @primary_key false
-
   embedded_schema do
     field(:number, :string)
     field(:country_code, :integer)
@@ -29,8 +27,8 @@ defmodule PolymorphicEmbed.Channel.SMS do
       on_replace: :update
     )
 
-    embeds_one(:result, PolymorphicEmbed.Channel.SMSResult)
-    embeds_many(:attempts, PolymorphicEmbed.Channel.SMSAttempts)
+    embeds_one(:result, PolymorphicEmbed.Channel.SMSResult, on_replace: :update)
+    embeds_many(:attempts, PolymorphicEmbed.Channel.SMSAttempts, on_replace: :delete)
   end
 
   def changeset(struct, attrs) do
