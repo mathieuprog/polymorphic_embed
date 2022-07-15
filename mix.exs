@@ -31,16 +31,16 @@ defmodule PolymorphicEmbed.MixProject do
 
   defp deps do
     [
-      {:ecto, "~> 3.6"},
-      {:jason, "~> 1.2"},
-      {:phoenix_html, "~> 2.14 or ~> 3.0", optional: true},
-      {:ex_doc, "~> 0.23", only: :dev},
-      {:ecto_sql, "~> 3.6", only: :test},
-      {:postgrex, "~> 0.15", only: :test},
-      {:query_builder, "~> 1.0.0", only: :test},
-      {:phoenix_ecto, "~> 4.2", only: :test},
-      {:phoenix_live_view, "~> 0.17.7", only: :test},
-      {:floki, "~> 0.33.0", only: :test}
+      {:ecto, "~> 3.8"},
+      {:jason, "~> 1.3"},
+      {:phoenix_html, "~> 2.14 or ~> 3.2", optional: true},
+      {:ex_doc, "~> 0.28", only: :dev},
+      {:ecto_sql, "~> 3.8", only: :test},
+      {:postgrex, "~> 0.16", only: :test},
+      {:query_builder, "~> 1.0", only: :test},
+      {:phoenix_ecto, "~> 4.4", only: :test},
+      {:phoenix_live_view, "~> 0.17", only: :test},
+      {:floki, "~> 0.33", only: :test}
     ]
   end
 
