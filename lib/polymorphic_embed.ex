@@ -351,7 +351,7 @@ defmodule PolymorphicEmbed do
 
   @doc """
   Returns the possible types for a given schema and field
-  
+
   you can call `types/2` like this:
       PolymorphicEmbed.types(MySchema, :contexts)
       #=> [:location, :age, :device]
@@ -437,6 +437,8 @@ defmodule PolymorphicEmbed do
         acc
     end)
   end
+
+  defp autogenerate_id([] = _schemas, _action), do: []
 
   defp autogenerate_id(schema, :update) do
     for {_, nil} <- Ecto.primary_key(schema) do

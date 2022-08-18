@@ -148,6 +148,24 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  test "PolymorphicEmbed array default to []" do
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+
+      sms_reminder_attrs = %{
+        text: "This is an SMS reminder #{generator}",
+        date: DateTime.utc_now()
+      }
+
+      assert {:ok, inserted_result} =
+               struct(reminder_module)
+               |> reminder_module.changeset(sms_reminder_attrs)
+               |> Repo.insert()
+
+      assert inserted_result.contexts == []
+    end
+  end
+
   test "invalid values" do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)

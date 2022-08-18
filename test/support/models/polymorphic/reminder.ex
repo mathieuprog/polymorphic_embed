@@ -26,7 +26,8 @@ defmodule PolymorphicEmbed.Reminder do
         age: PolymorphicEmbed.Reminder.Context.Age,
         device: PolymorphicEmbed.Reminder.Context.Device
       ],
-      on_replace: :delete
+      on_replace: :delete,
+      default: []
     )
 
     field(:contexts2, {:array, PolymorphicEmbed},
