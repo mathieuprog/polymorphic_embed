@@ -351,7 +351,7 @@ defmodule PolymorphicEmbed do
 
   @doc """
   Returns the possible types for a given schema and field
-  
+
   you can call `types/2` like this:
       PolymorphicEmbed.types(MySchema, :contexts)
       #=> [:location, :age, :device]
@@ -438,7 +438,14 @@ defmodule PolymorphicEmbed do
     end)
   end
 
+  defp autogenerate_id([], _action), do: []
+
+  defp autogenerate_id([schema | rest], action) do
+    [autogenerate_id(schema, action) | autogenerate_id(rest, action)]
+  end
+
   defp autogenerate_id(schema, :update) do
+    # in case there is no primary key, Ecto.primary_key/1 returns an empty keyword list []
     for {_, nil} <- Ecto.primary_key(schema) do
       raise("no primary key found in #{inspect(schema)}")
     end

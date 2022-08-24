@@ -1185,6 +1185,148 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  test "generate ID for single embed in data" do
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+      sms_module = get_module(Channel.SMS, generator)
+
+      struct =
+        struct(reminder_module,
+          date: ~U[2020-05-28 02:57:19Z],
+          text: "This is an SMS reminder #{generator}",
+          channel: struct(sms_module))
+
+      changeset = reminder_module.changeset(struct, %{})
+
+      if polymorphic?(generator) do
+        assert changeset.changes.channel.id
+      else
+        assert map_size(changeset.changes) == 0
+      end
+
+      struct = Repo.insert!(changeset)
+
+      if polymorphic?(generator) do
+        assert changeset.changes.channel.id == struct.channel.id
+      else
+        assert struct.channel.id
+      end
+    end
+  end
+
+  test "generate ID for single embed in changes" do
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+
+      struct =
+        struct(reminder_module,
+          date: ~U[2020-05-28 02:57:19Z],
+          text: "This is an SMS reminder #{generator}")
+
+      changeset =
+        reminder_module.changeset(
+          struct,
+          %{
+            channel: %{
+              my_type_field: "sms",
+              number: "111",
+              country_code: 1,
+              provider: %{
+                __type__: "twilio",
+                api_key: "foo"
+              }
+            }
+          })
+
+      if polymorphic?(generator) do
+        assert changeset.changes.channel.id
+      else
+        refute Map.has_key?(changeset.changes.channel, :id)
+      end
+
+      struct = Repo.insert!(changeset)
+
+      if polymorphic?(generator) do
+        assert changeset.changes.channel.id == struct.channel.id
+      else
+        assert struct.channel.id
+      end
+    end
+  end
+
+  test "generate ID for list of embeds in data" do
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+      location_module = get_module(Reminder.Context.Location, generator)
+
+      struct =
+        struct(reminder_module,
+          date: ~U[2020-05-28 02:57:19Z],
+          text: "This is an SMS reminder #{generator}",
+          contexts: [
+            struct(location_module),
+            struct(location_module)
+          ])
+
+      changeset = reminder_module.changeset(struct, %{})
+
+      if polymorphic?(generator) do
+        assert Enum.at(changeset.changes.contexts, 0).id
+        assert Enum.at(changeset.changes.contexts, 1).id
+      else
+        assert map_size(changeset.changes) == 0
+      end
+
+      struct = Repo.insert!(changeset)
+
+      if polymorphic?(generator) do
+        assert Enum.at(changeset.changes.contexts, 0).id == Enum.at(struct.contexts, 0).id
+        assert Enum.at(changeset.changes.contexts, 1).id == Enum.at(struct.contexts, 1).id
+      else
+        assert Enum.at(struct.contexts, 0).id
+        assert Enum.at(struct.contexts, 1).id
+      end
+    end
+  end
+
+  test "generate ID for list of embeds in changes" do
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+
+      struct =
+        struct(reminder_module,
+          date: ~U[2020-05-28 02:57:19Z],
+          text: "This is an SMS reminder #{generator}")
+
+      changeset =
+        reminder_module.changeset(
+          struct,
+          %{
+            contexts: [
+              %{__type__: "location", address: "A"},
+              %{__type__: "location", address: "B"}
+            ]
+          })
+
+      if polymorphic?(generator) do
+        assert Enum.at(changeset.changes.contexts, 0).id
+        assert Enum.at(changeset.changes.contexts, 1).id
+      else
+        refute Map.has_key?(Enum.at(changeset.changes.contexts, 0), :id)
+      end
+
+      struct = Repo.insert!(changeset)
+
+      if polymorphic?(generator) do
+        assert Enum.at(changeset.changes.contexts, 0).id == Enum.at(struct.contexts, 0).id
+        assert Enum.at(changeset.changes.contexts, 1).id == Enum.at(struct.contexts, 1).id
+      else
+        assert Enum.at(struct.contexts, 0).id
+        assert Enum.at(struct.contexts, 1).id
+      end
+    end
+  end
+
   test "validates lists of polymorphic embeds" do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)
