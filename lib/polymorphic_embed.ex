@@ -33,25 +33,20 @@ defmodule PolymorphicEmbed do
       end)
 
     %{
-      types_metadata: types_metadata,
+      default: Keyword.get(opts, :default, nil),
+      on_replace: Keyword.fetch!(opts, :on_replace),
       on_type_not_found: Keyword.get(opts, :on_type_not_found, :changeset_error),
       type_field: Keyword.get(opts, :type_field, :__type__) |> to_string(),
-      on_replace: Keyword.fetch!(opts, :on_replace)
+      types_metadata: types_metadata
     }
   end
 
   def cast_polymorphic_embed(changeset, field, cast_options \\ []) do
     field_options = get_field_options(changeset.data.__struct__, field)
 
-    %{array?: array?, on_replace: on_replace, types_metadata: types_metadata} = field_options
+    raise_if_invalid_options(field, field_options)
 
-    if array? and on_replace != :delete do
-      raise "`:on_replace` option for field #{inspect(field)} must be set to `:delete`"
-    end
-
-    if not array? and on_replace != :update do
-      raise "`:on_replace` option for field #{inspect(field)} must be set to `:update`"
-    end
+    %{array?: array?, types_metadata: types_metadata} = field_options
 
     required = Keyword.get(cast_options, :required, false)
     with = Keyword.get(cast_options, :with, nil)
@@ -381,6 +376,20 @@ defmodule PolymorphicEmbed do
       {:array, {:parameterized, PolymorphicEmbed, options}} -> Map.put(options, :array?, true)
       {_, {:parameterized, PolymorphicEmbed, options}} -> Map.put(options, :array?, false)
       nil -> raise ArgumentError, "#{field} is not a polymorphic embed"
+    end
+  end
+
+  defp raise_if_invalid_options(field, %{array?: array?, default: default, on_replace: on_replace}) do
+    if array? and default != [] do
+      raise "`:default` option for list of polymorphic embeds is required and must be set to `[]`"
+    end
+
+    if array? and on_replace != :delete do
+      raise "`:on_replace` option for field #{inspect(field)} must be set to `:delete`"
+    end
+
+    if not array? and on_replace != :update do
+      raise "`:on_replace` option for field #{inspect(field)} must be set to `:update`"
     end
   end
 
