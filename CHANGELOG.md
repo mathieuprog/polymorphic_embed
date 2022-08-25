@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.0.x
+
+  * Default value for polymorphic list of embeds is `[]` instead of `nil` (following `embeds_many/3`)
+
+### Migration from 2.x to 3.x
+
+  * Use `polymorphic_embeds_one/2` and `polymorphic_embeds_many/2` macros instead of `field/3`
+
 ## 2.0.x
 
   * Support IDs
