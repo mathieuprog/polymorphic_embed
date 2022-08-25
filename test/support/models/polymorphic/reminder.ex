@@ -2,13 +2,13 @@ defmodule PolymorphicEmbed.Reminder do
   use Ecto.Schema
   use QueryBuilder
   import Ecto.Changeset
-  import PolymorphicEmbed, only: [cast_polymorphic_embed: 2, cast_polymorphic_embed: 3]
+  import PolymorphicEmbed
 
   schema "reminders" do
     field(:date, :utc_datetime)
     field(:text, :string)
 
-    field(:channel, PolymorphicEmbed,
+    polymorphic_embeds_one(:channel,
       types: [
         sms: PolymorphicEmbed.Channel.SMS,
         email: [
@@ -20,25 +20,23 @@ defmodule PolymorphicEmbed.Reminder do
       type_field: :my_type_field
     )
 
-    field(:contexts, {:array, PolymorphicEmbed},
+    polymorphic_embeds_many(:contexts,
       types: [
         location: PolymorphicEmbed.Reminder.Context.Location,
         age: PolymorphicEmbed.Reminder.Context.Age,
         device: PolymorphicEmbed.Reminder.Context.Device
       ],
-      on_replace: :delete,
-      default: []
+      on_replace: :delete
     )
 
-    field(:contexts2, {:array, PolymorphicEmbed},
+    polymorphic_embeds_many(:contexts2,
       types: [
         location: PolymorphicEmbed.Reminder.Context.Location,
         age: PolymorphicEmbed.Reminder.Context.Age,
         device: PolymorphicEmbed.Reminder.Context.Device
       ],
       on_type_not_found: :ignore,
-      on_replace: :delete,
-      default: []
+      on_replace: :delete
     )
 
     timestamps()

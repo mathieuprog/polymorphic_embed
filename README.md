@@ -24,16 +24,16 @@ Find the schema code and explanations below.
 defmodule MyApp.Reminder do
   use Ecto.Schema
   import Ecto.Changeset
-  import PolymorphicEmbed, only: [cast_polymorphic_embed: 3]
+  import PolymorphicEmbed
 
   schema "reminders" do
     field :date, :utc_datetime
     field :text, :string
 
-    field :channel, PolymorphicEmbed,
+    polymorphic_embeds_one :channel,
       types: [
         sms: MyApp.Channel.SMS,
-        email: [module: MyApp.Channel.Email, identify_by_fields: [:address, :confirmed]]
+        email: MyApp.Channel.Email
       ],
       on_type_not_found: :raise,
       on_replace: :update
@@ -134,7 +134,7 @@ useful if you need to store incomplete data, which might not allow identifying t
 Lists of polymorphic embeds are also supported:
 
 ```elixir
-field :contexts, {:array, PolymorphicEmbed},
+polymorphic_embeds_many :contexts,
   types: [
     location: MyApp.Context.Location,
     age: MyApp.Context.Age,

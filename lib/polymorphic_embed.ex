@@ -1,6 +1,20 @@
 defmodule PolymorphicEmbed do
   use Ecto.ParameterizedType
 
+  defmacro polymorphic_embeds_one(field_name, opts) do
+    quote do
+      field(unquote(field_name), PolymorphicEmbed, unquote(opts))
+    end
+  end
+
+  defmacro polymorphic_embeds_many(field_name, opts) do
+    opts = Keyword.merge(opts, default: [])
+
+    quote do
+      field(unquote(field_name), {:array, PolymorphicEmbed}, unquote(opts))
+    end
+  end
+
   @impl true
   def type(_params), do: :map
 

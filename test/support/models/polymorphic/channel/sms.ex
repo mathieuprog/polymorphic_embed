@@ -1,7 +1,7 @@
 defmodule PolymorphicEmbed.Channel.SMS do
   use Ecto.Schema
   import Ecto.Changeset
-  import PolymorphicEmbed, only: [cast_polymorphic_embed: 3]
+  import PolymorphicEmbed
 
   embedded_schema do
     field(:number, :string)
@@ -9,7 +9,7 @@ defmodule PolymorphicEmbed.Channel.SMS do
 
     field(:custom, :boolean, default: false)
 
-    field(:provider, PolymorphicEmbed,
+    polymorphic_embeds_one(:provider,
       types: [
         twilio: PolymorphicEmbed.Channel.TwilioSMSProvider,
         test: PolymorphicEmbed.Channel.AcmeSMSProvider
@@ -18,7 +18,7 @@ defmodule PolymorphicEmbed.Channel.SMS do
       on_replace: :update
     )
 
-    field(:fallback_provider, PolymorphicEmbed,
+    polymorphic_embeds_one(:fallback_provider,
       types: [
         twilio: PolymorphicEmbed.Channel.TwilioSMSProvider,
         test: PolymorphicEmbed.Channel.AcmeSMSProvider
