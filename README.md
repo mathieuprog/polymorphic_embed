@@ -81,6 +81,14 @@ defmodule MyApp.Channel.SMS do
 end
 ```
 
+In your migration file, you may use the type `:map` for both `polymorphic_embeds_one/2` and `polymorphic_embeds_many/2` fields.
+
+```elixir
+add(:channel, :map)
+```
+
+[It is not recommended](https://hexdocs.pm/ecto/3.8.4/Ecto.Schema.html#embeds_many/3) to use `{:array, :map}` for a list of embeds.
+
 ### `cast_polymorphic_embed/3`
 
 `cast_polymorphic_embed/3` must be called to cast the polymorphic embed's parameters.
