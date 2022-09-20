@@ -55,7 +55,9 @@ defmodule PolymorphicEmbed do
     }
   end
 
-  def cast_polymorphic_embed(changeset, field, cast_options \\ []) do
+  def cast_polymorphic_embed(changeset, field, cast_options \\ [])
+
+  def cast_polymorphic_embed(%Ecto.Changeset{} = changeset, field, cast_options) do
     field_options = get_field_options(changeset.data.__struct__, field)
 
     raise_if_invalid_options(field, field_options)
@@ -133,6 +135,10 @@ defmodule PolymorphicEmbed do
             )
         end
     end
+  end
+
+  def cast_polymorphic_embed(_, _, _) do
+    raise "cast_polymorphic_embed/3 only accepts a changeset as first argument"
   end
 
   defp cast_polymorphic_embeds_one(changeset, field, changeset_fun, params, field_options) do

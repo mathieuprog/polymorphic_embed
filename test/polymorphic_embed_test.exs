@@ -521,6 +521,16 @@ defmodule PolymorphicEmbedTest do
     assert email_module == reminder.channel.__struct__
   end
 
+  test "pass non-changeset as first argument to cast_polymorphic_embed/3 should fail" do
+    generator = :polymorphic
+
+    reminder_module = get_module(Reminder, generator)
+
+    assert_raise RuntimeError, ~r"cast_polymorphic_embed/3 only accepts a changeset as first argument", fn ->
+      PolymorphicEmbed.cast_polymorphic_embed(reminder_module, :channel)
+    end
+  end
+
   test "loading a nil embed" do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)
