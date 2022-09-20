@@ -531,6 +531,24 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  test "cast embed after change/2 call should succeed" do
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+
+      changeset = Ecto.Changeset.change(struct(reminder_module))
+
+      changeset =
+        if polymorphic?(generator) do
+          PolymorphicEmbed.cast_polymorphic_embed(changeset, :channel)
+        else
+          Ecto.Changeset.cast_embed(changeset, :channel)
+        end
+
+      assert changeset.valid?
+      assert map_size(changeset.changes) == 0
+    end
+  end
+
   test "loading a nil embed" do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)

@@ -86,7 +86,7 @@ defmodule PolymorphicEmbed do
         end
     end
 
-    changeset.params
+    (changeset.params || %{})
     |> Map.fetch(to_string(field))
     |> case do
       :error when required ->
