@@ -527,7 +527,7 @@ defmodule PolymorphicEmbedTest do
     reminder_module = get_module(Reminder, generator)
 
     assert_raise RuntimeError, ~r"cast_polymorphic_embed/3 only accepts a changeset as first argument", fn ->
-      PolymorphicEmbed.cast_polymorphic_embed(reminder_module, :channel)
+      PolymorphicEmbed.cast_polymorphic_embed(struct(reminder_module), :channel)
     end
   end
 
