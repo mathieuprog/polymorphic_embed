@@ -1,7 +1,7 @@
 defmodule PolymorphicEmbed.MixProject do
   use Mix.Project
 
-  @version "3.0.1"
+  @version "3.0.2"
 
   def project do
     [
@@ -32,7 +32,7 @@ defmodule PolymorphicEmbed.MixProject do
   defp deps do
     [
       {:ecto, "~> 3.8"},
-      {:jason, "~> 1.3"},
+      {:jason, "~> 1.4"},
       {:phoenix_html, "~> 2.14 or ~> 3.2", optional: true},
       {:ex_doc, "~> 0.28", only: :dev},
       {:ecto_sql, "~> 3.8", only: :test},
