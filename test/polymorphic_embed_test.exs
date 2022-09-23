@@ -2087,6 +2087,27 @@ defmodule PolymorphicEmbedTest do
         text_input(f, :text)
       end)
     end
+
+    # https://github.com/mathieuprog/polymorphic_embed/issues/59#issuecomment-1255774332
+    test "make sure that we do not 'absorb' atoms" do
+      opts = [
+        types: [
+          sms: PolymorphicEmbed.Channel.SMS,
+          email: [
+            module: PolymorphicEmbed.Channel.Email,
+            identify_by_fields: [:address, :confirmed]
+          ]
+        ],
+        on_replace: :update,
+        type_field: :my_type_field
+      ]
+
+      PolymorphicEmbed.init(opts)
+      |> Map.fetch!(:types_metadata)
+      |> Enum.each(fn %{type: type} ->
+        assert is_atom(type)
+      end)
+    end
   end
 
   describe "types/2" do

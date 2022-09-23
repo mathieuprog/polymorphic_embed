@@ -39,7 +39,7 @@ defmodule PolymorphicEmbed do
       |> Enum.map(fn
         {type_name, type_opts} ->
           %{
-            type: to_string(type_name),
+            type: type_name,
             module: Keyword.fetch!(type_opts, :module),
             identify_by_fields:
               type_opts |> Keyword.get(:identify_by_fields, []) |> Enum.map(&to_string/1)
@@ -361,7 +361,6 @@ defmodule PolymorphicEmbed do
   defp do_get_polymorphic_type(module, types_metadata) do
     get_metadata_for_module(module, types_metadata)
     |> Map.fetch!(:type)
-    |> String.to_atom()
   end
 
   @doc """
@@ -373,7 +372,7 @@ defmodule PolymorphicEmbed do
   """
   def types(schema, field) do
     %{types_metadata: types_metadata} = get_field_options(schema, field)
-    Enum.map(types_metadata, &String.to_existing_atom(&1.type))
+    Enum.map(types_metadata, &(&1.type))
   end
 
   defp get_metadata_for_module(module, types_metadata) do
@@ -381,9 +380,13 @@ defmodule PolymorphicEmbed do
   end
 
   defp get_metadata_for_type(type, types_metadata) do
-    type = to_string(type)
+    type = maybe_to_existing_atom(type)
     Enum.find(types_metadata, &(type == &1.type))
   end
+
+  defp maybe_to_existing_atom(value) when is_atom(value), do: value
+
+  defp maybe_to_existing_atom(value), do: String.to_existing_atom(value)
 
   defp get_field_options(schema, field) do
     try do
