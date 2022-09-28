@@ -1,10 +1,11 @@
 defmodule PolymorphicEmbedTest do
   use ExUnit.Case
+
   doctest PolymorphicEmbed
 
+  import Phoenix.Component
   import Phoenix.HTML
   import Phoenix.HTML.Form
-  import Phoenix.LiveView.Helpers
   import Phoenix.LiveViewTest
   import PolymorphicEmbed.HTML.Form
 
