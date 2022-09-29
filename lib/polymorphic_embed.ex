@@ -380,13 +380,9 @@ defmodule PolymorphicEmbed do
   end
 
   defp get_metadata_for_type(type, types_metadata) do
-    type = maybe_to_existing_atom(type)
-    Enum.find(types_metadata, &(type == &1.type))
+    type = to_string(type)
+    Enum.find(types_metadata, &(type == to_string(&1.type)))
   end
-
-  defp maybe_to_existing_atom(value) when is_atom(value), do: value
-
-  defp maybe_to_existing_atom(value), do: String.to_existing_atom(value)
 
   defp get_field_options(schema, field) do
     try do

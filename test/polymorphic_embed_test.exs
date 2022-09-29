@@ -522,6 +522,53 @@ defmodule PolymorphicEmbedTest do
     assert email_module == reminder.channel.__struct__
   end
 
+  test "wrong type as string adds error in changeset" do
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
+
+    attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an Email reminder",
+      channel: %{
+        my_type_field: "unknown type"
+      }
+    }
+
+    insert_result =
+      struct(reminder_module)
+      |> reminder_module.changeset(attrs)
+      |> Repo.insert()
+
+    assert {:error, %Ecto.Changeset{errors: [channel: {"is invalid", []}]}} = insert_result
+  end
+
+  test "wrong type as string raises" do
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
+
+    sms_reminder_attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an SMS reminder",
+      channel: %{
+        my_type_field: "sms",
+        number: "02/807.05.53",
+        country_code: 1,
+        result: %{success: true},
+        attempts: [],
+        provider: %{
+          __type__: "unknown type",
+          api_key: "foo"
+        }
+      }
+    }
+
+    assert_raise RuntimeError, ~r"could not infer polymorphic embed from data", fn ->
+      struct(reminder_module)
+      |> reminder_module.changeset(sms_reminder_attrs)
+      |> Repo.insert()
+    end
+  end
+
   test "pass non-changeset as first argument to cast_polymorphic_embed/3 should fail" do
     generator = :polymorphic
 
