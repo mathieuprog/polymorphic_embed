@@ -2088,7 +2088,7 @@ defmodule PolymorphicEmbedTest do
 
     test "returns type from string parameters" do
       reminder_module = get_module(Reminder, :polymorphic)
-      attrs = %{"channel" => %{"__type__" => "email"}}
+      attrs = %{"channel" => %{"my_type_field" => "email"}}
 
       changeset =
         reminder_module
@@ -2105,7 +2105,7 @@ defmodule PolymorphicEmbedTest do
 
     test "returns type from atom parameters" do
       reminder_module = get_module(Reminder, :polymorphic)
-      attrs = %{channel: %{__type__: :email}}
+      attrs = %{channel: %{my_type_field: :email}}
 
       changeset =
         reminder_module
@@ -2115,6 +2115,23 @@ defmodule PolymorphicEmbedTest do
       safe_form_for(changeset, fn f ->
         assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel) ==
                  :email
+
+        text_input(f, :text)
+      end)
+    end
+
+    test "returns type from parameters while type field is custom" do
+      reminder_module = get_module(Reminder, :polymorphic)
+      attrs = %{channel: %{__type__: :email}}
+
+      changeset =
+        reminder_module
+        |> struct()
+        |> reminder_module.changeset(attrs)
+
+      safe_form_for(changeset, fn f ->
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel) ==
+                 nil
 
         text_input(f, :text)
       end)
