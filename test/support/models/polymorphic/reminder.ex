@@ -39,6 +39,8 @@ defmodule PolymorphicEmbed.Reminder do
       on_replace: :delete
     )
 
+    polymorphic_embeds_one(:attachment, types: :by_module, on_replace: :update)
+
     timestamps()
   end
 
@@ -47,6 +49,7 @@ defmodule PolymorphicEmbed.Reminder do
     |> cast(values, [:date, :text])
     |> validate_required(:date)
     |> cast_polymorphic_embed(:channel)
+    |> cast_polymorphic_embed(:attachment)
     |> cast_polymorphic_embed(:contexts)
     |> cast_polymorphic_embed(:contexts2)
   end
