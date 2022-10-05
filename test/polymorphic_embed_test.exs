@@ -24,7 +24,7 @@ defmodule PolymorphicEmbedTest do
     do: Module.concat([PolymorphicEmbed.Regular, name])
 
   describe "receive embedded as a map of values" do
-    test "when passing tyeps as keyword" do
+    test "when passing types as keyword" do
       for generator <- @generators do
         reminder_module = get_module(Reminder, generator)
 
