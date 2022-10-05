@@ -110,10 +110,9 @@ changeset
 
 ### PolymorphicEmbed Ecto type
 
-The `:types` option for the `PolymorphicEmbed` custom type contains a keyword list mapping an atom representing the type
-(in this example `:email` and `:sms`) with the corresponding embedded schema module.
+The `:types` option for the `PolymorphicEmbed` custom type is used to determine the type of the polymorphic embed. The value is either a keyword list mapping an atom representing the type (in this example `:email` and `:sms`) with the corresponding embedded schema module, or the value :by_module which indicates that the struct will be passed in at runtime.
 
-There are two strategies to detect the right embedded schema to use:
+There are three strategies to detect the right embedded schema to use:
 
 1.
 ```elixir
@@ -136,6 +135,16 @@ parameter is then no longer required.
 
 Note that you may still include a `__type__` parameter that will take precedence over this strategy (this could still be
 useful if you need to store incomplete data, which might not allow identifying the type).
+
+3. 
+```elixir
+polymorphic_embeds_many :attachment,
+  types: :by_module,
+  on_replace: :update
+```
+
+The `:by_module` value indicates that this field will receive an embedded_struct in the `type_field` (by default `__type__`) which is used to cash the embed. 
+If you specify `types: :by_module`, the `"__type__"` (or `:__type__`) parameter should contain the fully qualified and reachable module name of the embedded schema, such as "MyApp.Channel.Email". This is equivalent to specifying
 
 #### List of polymorphic embeds
 
