@@ -13,7 +13,8 @@ defmodule PolymorphicEmbed.Channel.Email do
   def changeset(email, params) do
     email
     |> cast(params, ~w(address confirmed valid)a)
-    |> validate_required(:address)
-    |> validate_length(:address, min: 3)
+
+    # |> validate_required(:address)
+    # |> validate_length(:address, min: 3)
   end
 end
