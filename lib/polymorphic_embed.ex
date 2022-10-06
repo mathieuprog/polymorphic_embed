@@ -72,6 +72,7 @@ defmodule PolymorphicEmbed do
     %{array?: array?, types_metadata: types_metadata} = field_options
 
     required = Keyword.get(cast_options, :required, false)
+
     with = Keyword.get(cast_options, :with, nil)
 
     changeset_fun = fn
@@ -91,6 +92,13 @@ defmodule PolymorphicEmbed do
           fun ->
             apply(fun, [struct, params])
         end
+
+      struct, params when is_tuple(with) and tuple_size(with) == 3 ->
+        {module, function_name, args} = with
+        apply(module, function_name, [struct, params | args])
+
+      struct, params when is_function(with) ->
+        apply(with, [struct, params])
     end
 
     (changeset.params || %{})
@@ -438,6 +446,11 @@ defmodule PolymorphicEmbed do
     if not array? and on_replace != :update do
       raise "`:on_replace` option for field #{inspect(field)} must be set to `:update`"
     end
+  end
+
+  defp convert_map_keys_to_string(%_{} = struct) do
+    Map.from_struct(struct)
+    |> convert_map_keys_to_string()
   end
 
   defp convert_map_keys_to_string(%{} = map),
