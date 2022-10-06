@@ -29,22 +29,29 @@ defmodule PolymorphicEmbed do
     types_metadata =
       opts
       |> Keyword.fetch!(:types)
-      |> Enum.map(fn
-        {type_name, type_opts} when is_list(type_opts) ->
-          {type_name, type_opts}
+      |> case do
+        :by_module ->
+          %{lookup_type_fun: :by_module}
 
-        {type_name, module} ->
-          {type_name, module: module}
-      end)
-      |> Enum.map(fn
-        {type_name, type_opts} ->
-          %{
-            type: type_name,
-            module: Keyword.fetch!(type_opts, :module),
-            identify_by_fields:
-              type_opts |> Keyword.get(:identify_by_fields, []) |> Enum.map(&to_string/1)
-          }
-      end)
+        types when is_list(types) ->
+          types
+          |> Enum.map(fn
+            {type_name, type_opts} when is_list(type_opts) ->
+              {type_name, type_opts}
+
+            {type_name, module} ->
+              {type_name, module: module}
+          end)
+          |> Enum.map(fn
+            {type_name, type_opts} ->
+              %{
+                type: type_name,
+                module: Keyword.fetch!(type_opts, :module),
+                identify_by_fields:
+                  type_opts |> Keyword.get(:identify_by_fields, []) |> Enum.map(&to_string/1)
+              }
+          end)
+      end
 
     %{
       default: Keyword.get(opts, :default, nil),
@@ -65,6 +72,7 @@ defmodule PolymorphicEmbed do
     %{array?: array?, types_metadata: types_metadata} = field_options
 
     required = Keyword.get(cast_options, :required, false)
+
     with = Keyword.get(cast_options, :with, nil)
 
     changeset_fun = fn
@@ -84,6 +92,13 @@ defmodule PolymorphicEmbed do
           fun ->
             apply(fun, [struct, params])
         end
+
+      struct, params when is_tuple(with) and tuple_size(with) == 3 ->
+        {module, function_name, args} = with
+        apply(module, function_name, [struct, params | args])
+
+      struct, params when is_function(with) ->
+        apply(with, [struct, params])
     end
 
     (changeset.params || %{})
@@ -339,10 +354,23 @@ defmodule PolymorphicEmbed do
       # Enum.count(contained -- container) == 0
       # contained -- container == []
       types_metadata
-      |> Enum.filter(&([] != &1.identify_by_fields))
-      |> Enum.find(&([] == &1.identify_by_fields -- Map.keys(attrs)))
-      |> (&(&1 && Map.fetch!(&1, :module))).()
+      |> case do
+        %{lookup_type_fun: :by_module} ->
+          nil
+
+        _ ->
+          types_metadata
+          |> Enum.filter(&([] != &1.identify_by_fields))
+          |> Enum.find(&([] == &1.identify_by_fields -- Map.keys(attrs)))
+          |> (&(&1 && Map.fetch!(&1, :module))).()
+      end
     end
+  end
+
+  defp do_get_polymorphic_module_for_type(type, %{lookup_type_fun: :by_module}) do
+    type = to_string(type)
+
+    Module.safe_concat([type])
   end
 
   defp do_get_polymorphic_module_for_type(type, types_metadata) do
@@ -353,6 +381,14 @@ defmodule PolymorphicEmbed do
   def get_polymorphic_type(schema, field, module_or_struct) do
     %{types_metadata: types_metadata} = get_field_options(schema, field)
     do_get_polymorphic_type(module_or_struct, types_metadata)
+  end
+
+  defp do_get_polymorphic_type(%module{}, %{lookup_type_fun: :by_module}),
+    do: do_get_polymorphic_type(module, %{lookup_type_fun: :by_module})
+
+  defp do_get_polymorphic_type(module, %{lookup_type_fun: :by_module}) do
+    module = to_string(module)
+    Module.safe_concat([module])
   end
 
   defp do_get_polymorphic_type(%module{}, types_metadata),
@@ -372,7 +408,7 @@ defmodule PolymorphicEmbed do
   """
   def types(schema, field) do
     %{types_metadata: types_metadata} = get_field_options(schema, field)
-    Enum.map(types_metadata, &(&1.type))
+    Enum.map(types_metadata, & &1.type)
   end
 
   defp get_metadata_for_module(module, types_metadata) do
@@ -410,6 +446,11 @@ defmodule PolymorphicEmbed do
     if not array? and on_replace != :update do
       raise "`:on_replace` option for field #{inspect(field)} must be set to `:update`"
     end
+  end
+
+  defp convert_map_keys_to_string(%_{} = struct) do
+    Map.from_struct(struct)
+    |> convert_map_keys_to_string()
   end
 
   defp convert_map_keys_to_string(%{} = map),
