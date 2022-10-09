@@ -574,9 +574,11 @@ defmodule PolymorphicEmbedTest do
 
     reminder_module = get_module(Reminder, generator)
 
-    assert_raise RuntimeError, ~r"cast_polymorphic_embed/3 only accepts a changeset as first argument", fn ->
-      PolymorphicEmbed.cast_polymorphic_embed(struct(reminder_module), :channel)
-    end
+    assert_raise RuntimeError,
+                 ~r"cast_polymorphic_embed/3 only accepts a changeset as first argument",
+                 fn ->
+                   PolymorphicEmbed.cast_polymorphic_embed(struct(reminder_module), :channel)
+                 end
   end
 
   test "cast embed after change/2 call should succeed" do
@@ -1270,7 +1272,8 @@ defmodule PolymorphicEmbedTest do
         struct(reminder_module,
           date: ~U[2020-05-28 02:57:19Z],
           text: "This is an SMS reminder #{generator}",
-          channel: struct(sms_module))
+          channel: struct(sms_module)
+        )
 
       changeset = reminder_module.changeset(struct, %{})
 
@@ -1297,7 +1300,8 @@ defmodule PolymorphicEmbedTest do
       struct =
         struct(reminder_module,
           date: ~U[2020-05-28 02:57:19Z],
-          text: "This is an SMS reminder #{generator}")
+          text: "This is an SMS reminder #{generator}"
+        )
 
       changeset =
         reminder_module.changeset(
@@ -1312,7 +1316,8 @@ defmodule PolymorphicEmbedTest do
                 api_key: "foo"
               }
             }
-          })
+          }
+        )
 
       if polymorphic?(generator) do
         assert changeset.changes.channel.id
@@ -1342,7 +1347,8 @@ defmodule PolymorphicEmbedTest do
           contexts: [
             struct(location_module),
             struct(location_module)
-          ])
+          ]
+        )
 
       changeset = reminder_module.changeset(struct, %{})
 
@@ -1372,7 +1378,8 @@ defmodule PolymorphicEmbedTest do
       struct =
         struct(reminder_module,
           date: ~U[2020-05-28 02:57:19Z],
-          text: "This is an SMS reminder #{generator}")
+          text: "This is an SMS reminder #{generator}"
+        )
 
       changeset =
         reminder_module.changeset(
@@ -1382,7 +1389,8 @@ defmodule PolymorphicEmbedTest do
               %{__type__: "location", address: "A"},
               %{__type__: "location", address: "B"}
             ]
-          })
+          }
+        )
 
       if polymorphic?(generator) do
         assert Enum.at(changeset.changes.contexts, 0).id
