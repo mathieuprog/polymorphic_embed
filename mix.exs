@@ -19,7 +19,23 @@ defmodule PolymorphicEmbed.MixProject do
       # ExDoc
       name: "Polymorphic Embed",
       source_url: "https://github.com/mathieuprog/polymorphic_embed",
-      docs: docs()
+      docs: docs(),
+
+      # Dialyzer
+      dialyzer: [
+        plt_add_apps: [:mix, :phoenix_html],
+        plt_file: {:no_warn, ".plts/polymorphic.plt"}
+      ],
+
+      # ExCoveralls
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test,
+        "coveralls.github": :test
+      ]
     ]
   end
 
@@ -40,7 +56,8 @@ defmodule PolymorphicEmbed.MixProject do
       {:query_builder, "~> 1.0", only: :test},
       {:phoenix_ecto, "~> 4.4", only: :test},
       {:phoenix_live_view, "~> 0.18", only: :test},
-      {:floki, "~> 0.33", only: :test}
+      {:floki, "~> 0.33", only: :test},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false}
     ]
   end
 
