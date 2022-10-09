@@ -58,7 +58,8 @@ defmodule PolymorphicEmbed.MixProject do
       {:phoenix_live_view, "~> 0.18", only: :test},
       {:floki, "~> 0.33", only: :test},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:excoveralls, "~> 0.15", only: :test}
+      {:excoveralls, "~> 0.15", only: :test},
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
     ]
   end
 
