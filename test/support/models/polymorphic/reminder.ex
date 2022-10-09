@@ -20,6 +20,23 @@ defmodule PolymorphicEmbed.Reminder do
       type_field: :my_type_field
     )
 
+    polymorphic_embeds_one(:channel2,
+      types: [
+        sms: PolymorphicEmbed.Channel.SMS,
+        email: PolymorphicEmbed.Channel.Email
+      ],
+      on_replace: :update
+    )
+
+    polymorphic_embeds_one(:channel3,
+      types: [
+        sms: PolymorphicEmbed.Channel.SMS,
+        email: PolymorphicEmbed.Channel.Email
+      ],
+      on_replace: :update,
+      type_field: :my_type_field
+    )
+
     polymorphic_embeds_many(:contexts,
       types: [
         location: PolymorphicEmbed.Reminder.Context.Location,
