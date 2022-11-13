@@ -26,3 +26,5 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 polymorphic_embed-*.tar
 
+# Ignore Dialyzer plts file
+.plts

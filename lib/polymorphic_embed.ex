@@ -372,7 +372,7 @@ defmodule PolymorphicEmbed do
   """
   def types(schema, field) do
     %{types_metadata: types_metadata} = get_field_options(schema, field)
-    Enum.map(types_metadata, &(&1.type))
+    Enum.map(types_metadata, & &1.type)
   end
 
   defp get_metadata_for_module(module, types_metadata) do
