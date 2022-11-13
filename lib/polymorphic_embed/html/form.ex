@@ -14,7 +14,19 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
         %_{} = value ->
           PolymorphicEmbed.get_polymorphic_type(schema, field, value)
 
-        _ ->
+        %{} = map ->
+          case PolymorphicEmbed.get_polymorphic_module(schema, field, map) do
+            nil ->
+              nil
+
+            module ->
+              PolymorphicEmbed.get_polymorphic_type(schema, field, module)
+          end
+
+        list when is_list(list) ->
+          nil
+
+        nil ->
           nil
       end
     end
