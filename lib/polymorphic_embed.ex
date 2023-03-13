@@ -435,11 +435,37 @@ defmodule PolymorphicEmbed do
 
   defp merge_polymorphic_keys(map, changes, types, msg_func) do
     Enum.reduce(types, map, fn
+      {field, {:assoc, %{cardinality: :one}}}, acc ->
+        if changeset = Map.get(changes, field) do
+          case traverse_errors(changeset, msg_func) do
+            errors when errors == %{} -> acc
+            errors -> Map.put(acc, field, errors)
+          end
+        else
+          acc
+        end
+
       {field, {:parameterized, PolymorphicEmbed, _opts}}, acc ->
         if changeset = Map.get(changes, field) do
           case traverse_errors(changeset, msg_func) do
             errors when errors == %{} -> acc
             errors -> Map.put(acc, field, errors)
+          end
+        else
+          acc
+        end
+
+      {field, {:assoc, %{cardinality: :many}}}, acc ->
+        if changesets = Map.get(changes, field) do
+          {errors, all_empty?} =
+            Enum.map_reduce(changesets, true, fn changeset, all_empty? ->
+              errors = traverse_errors(changeset, msg_func)
+              {errors, all_empty? and errors == %{}}
+            end)
+
+          case all_empty? do
+            true -> acc
+            false -> Map.put(acc, field, errors)
           end
         else
           acc
