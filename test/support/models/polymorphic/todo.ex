@@ -1,6 +1,6 @@
 defmodule PolymorphicEmbed.Todo do
   @moduledoc """
-  A todo item, which always has a single reminder.
+  A todo item, which can optionally have a single reminder.
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -8,6 +8,7 @@ defmodule PolymorphicEmbed.Todo do
 
   schema "todos" do
     belongs_to(:reminder, Reminder)
+    embeds_one(:embedded_reminder, Reminder)
     timestamps()
   end
 
@@ -15,5 +16,6 @@ defmodule PolymorphicEmbed.Todo do
     struct
     |> cast(params, [])
     |> cast_assoc(:reminder)
+    |> cast_embed(:embedded_reminder)
   end
 end

@@ -8,6 +8,7 @@ defmodule PolymorphicEmbed.Regular.Event do
 
   schema "events" do
     has_many(:reminders, Reminder)
+    embeds_many(:embedded_reminders, Reminder)
     timestamps()
   end
 
@@ -15,5 +16,6 @@ defmodule PolymorphicEmbed.Regular.Event do
     struct
     |> cast(params, [])
     |> cast_assoc(:reminders)
+    |> cast_embed(:embedded_reminders)
   end
 end

@@ -414,6 +414,127 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  test "traverse_errors on nested embeds_many relations" do
+    for generator <- @generators do
+      event_module = get_module(Event, generator)
+
+      event_attrs = %{
+        embedded_reminders: [
+          %{
+            text: "This is an SMS reminder",
+            channel: %{
+              my_type_field: "sms"
+            },
+            contexts: [
+              %{
+                __type__: "location",
+                address: "hello",
+                country: %{
+                  name: ""
+                }
+              },
+              %{
+                __type__: "location",
+                address: ""
+              }
+            ]
+          }
+        ]
+      }
+
+      changeset =
+        struct(event_module)
+        |> event_module.changeset(event_attrs)
+
+      insert_result = Repo.insert(changeset)
+
+      assert {:error,
+              %Ecto.Changeset{
+                action: :insert,
+                valid?: false,
+                errors: errors,
+                changes: %{
+                  embedded_reminders: [
+                    %{
+                      action: :insert,
+                      valid?: false,
+                      errors: reminder_errors,
+                      changes: %{
+                        channel: %{
+                          action: :insert,
+                          valid?: false,
+                          errors: channel_errors
+                        },
+                        contexts: [
+                          %{
+                            action: :insert,
+                            valid?: false,
+                            errors: context1_errors,
+                            changes: %{
+                              country: %{
+                                action: :insert,
+                                valid?: false,
+                                errors: country_errors
+                              }
+                            }
+                          },
+                          %{
+                            action: :insert,
+                            valid?: false,
+                            errors: context2_errors
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }} = insert_result
+
+      assert [] = errors
+
+      assert [date: {"can't be blank", [validation: :required]}] = reminder_errors
+
+      assert %{
+               number: {"can't be blank", [validation: :required]},
+               country_code: {"can't be blank", [validation: :required]},
+               provider: {"can't be blank", [validation: :required]}
+             } = Map.new(channel_errors)
+
+      assert [] = context1_errors
+      assert %{address: {"can't be blank", [validation: :required]}} = Map.new(context2_errors)
+      assert %{name: {"can't be blank", [validation: :required]}} = Map.new(country_errors)
+
+      traverse_errors_fun =
+        if polymorphic?(generator) do
+          &PolymorphicEmbed.traverse_errors/2
+        else
+          &Ecto.Changeset.traverse_errors/2
+        end
+
+      %{
+        embedded_reminders: [
+          %{
+            channel: %{
+              country_code: ["can't be blank"],
+              number: ["can't be blank"],
+              provider: ["can't be blank"]
+            },
+            contexts: [%{country: %{name: ["can't be blank"]}}, %{address: ["can't be blank"]}],
+            date: ["can't be blank"]
+          }
+        ]
+      } =
+        traverse_errors_fun.(
+          changeset,
+          fn {msg, opts} ->
+            Enum.reduce(opts, msg, fn {key, value}, acc ->
+              String.replace(acc, "%{#{key}}", to_string(value))
+            end)
+          end
+        )
+    end
+  end
+
   test "traverse_errors on nested *-to-one relations" do
     for generator <- @generators do
       todo_module = get_module(Todo, generator)
@@ -509,6 +630,121 @@ defmodule PolymorphicEmbedTest do
 
       %{
         reminder: %{
+          channel: %{
+            country_code: ["can't be blank"],
+            number: ["can't be blank"],
+            provider: ["can't be blank"]
+          },
+          contexts: [%{country: %{name: ["can't be blank"]}}, %{address: ["can't be blank"]}],
+          date: ["can't be blank"]
+        }
+      } =
+        traverse_errors_fun.(
+          changeset,
+          fn {msg, opts} ->
+            Enum.reduce(opts, msg, fn {key, value}, acc ->
+              String.replace(acc, "%{#{key}}", to_string(value))
+            end)
+          end
+        )
+    end
+  end
+
+  test "traverse_errors on nested embeds_one relations" do
+    for generator <- @generators do
+      todo_module = get_module(Todo, generator)
+
+      todo_attrs = %{
+        embedded_reminder: %{
+          text: "This is an SMS reminder",
+          channel: %{
+            my_type_field: "sms"
+          },
+          contexts: [
+            %{
+              __type__: "location",
+              address: "hello",
+              country: %{
+                name: ""
+              }
+            },
+            %{
+              __type__: "location",
+              address: ""
+            }
+          ]
+        }
+      }
+
+      changeset =
+        struct(todo_module)
+        |> todo_module.changeset(todo_attrs)
+
+      insert_result = Repo.insert(changeset)
+
+      assert {:error,
+              %Ecto.Changeset{
+                action: :insert,
+                valid?: false,
+                errors: errors,
+                changes: %{
+                  embedded_reminder: %{
+                    action: :insert,
+                    valid?: false,
+                    errors: reminder_errors,
+                    changes: %{
+                      channel: %{
+                        action: :insert,
+                        valid?: false,
+                        errors: channel_errors
+                      },
+                      contexts: [
+                        %{
+                          action: :insert,
+                          valid?: false,
+                          errors: context1_errors,
+                          changes: %{
+                            country: %{
+                              action: :insert,
+                              valid?: false,
+                              errors: country_errors
+                            }
+                          }
+                        },
+                        %{
+                          action: :insert,
+                          valid?: false,
+                          errors: context2_errors
+                        }
+                      ]
+                    }
+                  }
+                }
+              }} = insert_result
+
+      assert [] = errors
+
+      assert [date: {"can't be blank", [validation: :required]}] = reminder_errors
+
+      assert %{
+               number: {"can't be blank", [validation: :required]},
+               country_code: {"can't be blank", [validation: :required]},
+               provider: {"can't be blank", [validation: :required]}
+             } = Map.new(channel_errors)
+
+      assert [] = context1_errors
+      assert %{address: {"can't be blank", [validation: :required]}} = Map.new(context2_errors)
+      assert %{name: {"can't be blank", [validation: :required]}} = Map.new(country_errors)
+
+      traverse_errors_fun =
+        if polymorphic?(generator) do
+          &PolymorphicEmbed.traverse_errors/2
+        else
+          &Ecto.Changeset.traverse_errors/2
+        end
+
+      %{
+        embedded_reminder: %{
           channel: %{
             country_code: ["can't be blank"],
             number: ["can't be blank"],
