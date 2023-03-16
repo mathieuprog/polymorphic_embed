@@ -1638,7 +1638,6 @@ defmodule PolymorphicEmbedTest do
           %{changeset: changeset, field: :channel3}
         )
         |> Floki.parse_fragment!()
-        |> dbg()
 
       assert [input] = Floki.find(html, "#reminder_channel3_my_type_field")
       assert Floki.attribute(input, "name") == ["reminder[channel3][my_type_field]"]
