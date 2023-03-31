@@ -62,7 +62,7 @@ defmodule MyApp.Channel.Email do
 
   def changeset(email, params) do
     email
-    |> cast(params, ~w(address confirmed)a)
+    |> cast(params, [:address, :confirmed])
     |> validate_required(:address)
     |> validate_length(:address, min: 4)
   end
@@ -72,11 +72,18 @@ end
 ```elixir
 defmodule MyApp.Channel.SMS do
   use Ecto.Schema
+  import Ecto.Changeset
 
   @primary_key false
 
   embedded_schema do
     field :number, :string
+  end
+
+  def changeset(sms, params) do
+    sms
+    |> cast(params, [:number])
+    |> validate_required(:number)
   end
 end
 ```
@@ -171,7 +178,7 @@ polymorphic_embeds_many :contexts,
 
 The library comes with a form helper in order to build form inputs for polymorphic embeds and display changeset errors.
 
-In the entrypoint defining your web interface (`lib/your_app_web.ex` file), add the following import:
+In the entrypoint defining your web interface (`lib/your_app_web.ex` file), add the following import, change `view` to the one your component use, ex. `liew_view`:
 
 ```elixir
 def view do
@@ -190,7 +197,7 @@ Here is an example form using the imported function:
 <%= inputs_for f, :reminders, fn reminder_form -> %>
   <%= polymorphic_embed_inputs_for reminder_form, :channel, :sms, fn sms_form -> %>
     <div class="sms-inputs">
-      <label>Number<label>
+      <label>Number</label>
       <%= text_input sms_form, :number %>
       <div class="error">
         <%= error_tag sms_form, :number %>
@@ -221,14 +228,15 @@ You may use `polymorphic_embed_inputs_for/2` when working with LiveView.
   <%= for channel_form <- polymorphic_embed_inputs_for f, :channel do %>
     <%= hidden_inputs_for(channel_form) %>
 
-    <%= case get_polymorphic_type(channel_form, Reminder, :channel) do %>
+    <%= case get_polymorphic_type(f, Reminder, :channel) do %>
       <% :sms -> %>
         <%= label channel_form, :number %>
         <%= text_input channel_form, :number %>
 
       <% :email -> %>
-        <%= label channel_form, :email %>
-        <%= text_input channel_form, :email %>
+        <%= label channel_form, :email_address %>
+        <%= text_input channel_form, :adress %>
+    <% end %>
   <% end %>
 </.form>
 ```
