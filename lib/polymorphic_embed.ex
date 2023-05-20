@@ -286,9 +286,15 @@ defmodule PolymorphicEmbed do
   def load(data, loader, params) when is_binary(data),
     do: do_load(Jason.decode!(data), loader, params)
 
-  def do_load(data, _loader, %{types_metadata: types_metadata, type_field: type_field}) do
+  def do_load(data, _loader, %{on_type_not_found: on_type_not_found, types_metadata: types_metadata, type_field: type_field}) do
     case do_get_polymorphic_module_from_map(data, type_field, types_metadata) do
-      nil -> raise_cannot_infer_type_from_data(data)
+      nil ->
+        case on_type_not_found do
+          :raise -> raise_cannot_infer_type_from_data(data)
+          :nilify -> {:ok, nil}
+          _ -> {:ok, data}
+        end
+
       module when is_atom(module) -> {:ok, Ecto.embedded_load(module, data, :json)}
     end
   end
