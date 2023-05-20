@@ -1101,6 +1101,36 @@ defmodule PolymorphicEmbedTest do
     struct(reminder_module,
       date: ~U[2020-05-28 02:57:19Z],
       text: "This is an SMS reminder",
+      channel_raise:
+        struct(sms_module,
+          country_code: 1,
+          number: "02/807.05.53"
+        )
+    )
+    |> reminder_module.changeset(%{})
+    |> Repo.insert()
+
+    Ecto.Adapters.SQL.query!(
+      Repo,
+      "UPDATE reminders SET channel_raise = jsonb_set(channel_raise, '{my_type_field}', '\"foo\"')",
+      []
+    )
+
+    assert_raise RuntimeError, ~r"could not infer polymorphic embed from data .* \"foo\"", fn ->
+      reminder_module
+      |> QueryBuilder.where(text: "This is an SMS reminder")
+      |> Repo.one()
+    end
+  end
+
+  test "cannot load the right struct but don't raise exception" do
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
+    sms_module = get_module(Channel.SMS, generator)
+
+    struct(reminder_module,
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an SMS reminder",
       channel:
         struct(sms_module,
           country_code: 1,
@@ -1115,12 +1145,11 @@ defmodule PolymorphicEmbedTest do
       "UPDATE reminders SET channel = jsonb_set(channel, '{my_type_field}', '\"foo\"')",
       []
     )
-
-    assert_raise RuntimeError, ~r"could not infer polymorphic embed from data .* \"foo\"", fn ->
+    # struct was unpacked and not raised exception
+    assert %{channel: %{"my_type_field" => "foo"}} =
       reminder_module
       |> QueryBuilder.where(text: "This is an SMS reminder")
       |> Repo.one()
-    end
   end
 
   test "changing type" do
