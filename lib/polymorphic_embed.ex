@@ -46,11 +46,14 @@ defmodule PolymorphicEmbed do
           }
       end)
 
+    type_field = Keyword.get(opts, :type_field, :__type__)
+
     %{
       default: Keyword.get(opts, :default, nil),
       on_replace: Keyword.fetch!(opts, :on_replace),
       on_type_not_found: Keyword.get(opts, :on_type_not_found, :changeset_error),
-      type_field: Keyword.get(opts, :type_field, :__type__) |> to_string(),
+      type_field: type_field |> to_string(),
+      type_field_atom: type_field,
       types_metadata: types_metadata
     }
   end
@@ -384,7 +387,8 @@ defmodule PolymorphicEmbed do
     Enum.find(types_metadata, &(type == to_string(&1.type)))
   end
 
-  defp get_field_options(schema, field) do
+  @doc false
+  def get_field_options(schema, field) do
     try do
       schema.__schema__(:type, field)
     rescue

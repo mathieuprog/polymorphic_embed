@@ -7,6 +7,8 @@ defmodule PolymorphicEmbed.CreateTables do
       add(:text, :text, null: false)
 
       add(:channel, :map)
+      add(:channel2, :map)
+      add(:channel3, :map)
       add(:contexts, :map)
       add(:contexts2, :map)
 

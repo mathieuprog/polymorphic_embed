@@ -14,7 +14,19 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
         %_{} = value ->
           PolymorphicEmbed.get_polymorphic_type(schema, field, value)
 
-        _ ->
+        %{} = map ->
+          case PolymorphicEmbed.get_polymorphic_module(schema, field, map) do
+            nil ->
+              nil
+
+            module ->
+              PolymorphicEmbed.get_polymorphic_type(schema, field, module)
+          end
+
+        list when is_list(list) ->
+          nil
+
+        nil ->
           nil
       end
     end
@@ -141,6 +153,9 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
             valid?: errors == []
         }
 
+        %schema{} = form.source.data
+        %{type_field_atom: type_field} = PolymorphicEmbed.get_field_options(schema, field)
+
         %Phoenix.HTML.Form{
           source: changeset,
           impl: Phoenix.HTML.FormData.Ecto.Changeset,
@@ -150,7 +165,7 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
           errors: errors,
           data: data,
           params: params,
-          hidden: [__type__: to_string(type)],
+          hidden: [{type_field, to_string(type)}],
           options: options
         }
       end)
