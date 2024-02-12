@@ -47,11 +47,11 @@ defmodule PolymorphicEmbed.MixProject do
 
   defp deps do
     [
-      {:ecto, "~> 3.9"},
+      {:ecto, "~> 3.11"},
       {:jason, "~> 1.4"},
       {:phoenix_html, "~> 2.14 or ~> 3.2", optional: true},
       {:ex_doc, "~> 0.28", only: :dev},
-      {:ecto_sql, "~> 3.9", only: :test},
+      {:ecto_sql, "~> 3.11", only: :test},
       {:postgrex, "~> 0.16", only: :test},
       {:query_builder, "~> 1.0", only: :test},
       {:phoenix_ecto, "~> 4.4", only: :test},
