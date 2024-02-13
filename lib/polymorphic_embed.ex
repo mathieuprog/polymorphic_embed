@@ -2,17 +2,58 @@ defmodule PolymorphicEmbed do
   use Ecto.ParameterizedType
 
   defmacro polymorphic_embeds_one(field_name, opts) do
+    opts = Keyword.update!(opts, :types, &expand_alias(&1, __CALLER__))
+
     quote do
       field(unquote(field_name), PolymorphicEmbed, unquote(opts))
     end
   end
 
   defmacro polymorphic_embeds_many(field_name, opts) do
-    opts = Keyword.merge(opts, default: [])
+    opts =
+      opts
+      |> Keyword.put_new(:default, [])
+      |> Keyword.update!(:types, &expand_alias(&1, __CALLER__))
 
     quote do
       field(unquote(field_name), {:array, PolymorphicEmbed}, unquote(opts))
     end
+  end
+
+  # Expand module aliases to avoid creating compile-time dependencies between the
+  # parent schema that uses `polymorphic_embeds_one` or `polymorphic_embeds_many`
+  # and the embedded schemas.
+  defp expand_alias(types, env) when is_list(types) do
+    Enum.map(types, fn
+      {type_name, type_opts} when is_list(type_opts) ->
+        {type_name, Keyword.update!(type_opts, :module, &do_expand_alias(&1, env))}
+
+      {type_name, module} ->
+        {type_name, do_expand_alias(module, env)}
+    end)
+  end
+
+  defp expand_alias({:%{}, meta, types}, env) do
+    types = expand_alias(types, env)
+    {:%{}, meta, types}
+  end
+
+  # if it's not a list or a map, it means it's being defined by a reference of some kind,
+  # possibly via module attribute like:
+
+  # @types [twilio: PolymorphicEmbed.Channel.TwilioSMSProvider]
+  # # ...
+  #   polymorphic_embeds_one(:fallback_provider, types: @types)
+
+  # which means we can't expand aliases
+  defp expand_alias(types, _env), do: types
+
+  defp do_expand_alias({:__aliases__, _, _} = ast, env) do
+    Macro.expand(ast, %{env | function: {:__schema__, 2}})
+  end
+
+  defp do_expand_alias(ast, _env) do
+    ast
   end
 
   @impl true

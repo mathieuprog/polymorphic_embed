@@ -2147,14 +2147,24 @@ defmodule PolymorphicEmbedTest do
   end
 
   describe "types/2" do
-    test "returns the types for a polymoprhic embed field" do
+    test "returns the types for a polymoprhic embed field defined via keyword list" do
+      assert PolymorphicEmbed.types(PolymorphicEmbed.Reminder, :channel) ==
+               [:sms, :email]
+    end
+
+    test "returns the types for a polymoprhic embed field defined via map" do
       assert PolymorphicEmbed.types(PolymorphicEmbed.Reminder, :channel) ==
                [:sms, :email]
     end
   end
 
   describe "get_polymorphic_module/3" do
-    test "returns the module for a type" do
+    test "returns the module for a type defined via keyword list" do
+      assert PolymorphicEmbed.get_polymorphic_module(PolymorphicEmbed.Reminder, :channel, :sms) ==
+               PolymorphicEmbed.Channel.SMS
+    end
+
+    test "returns the module for a type defined via map" do
       assert PolymorphicEmbed.get_polymorphic_module(PolymorphicEmbed.Reminder, :channel, :sms) ==
                PolymorphicEmbed.Channel.SMS
     end
