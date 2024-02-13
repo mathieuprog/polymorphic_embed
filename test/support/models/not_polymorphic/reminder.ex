@@ -9,7 +9,9 @@ defmodule PolymorphicEmbed.Regular.Reminder do
 
     embeds_one(:channel, PolymorphicEmbed.Regular.Channel.SMS, on_replace: :update)
 
-    embeds_many(:contexts, PolymorphicEmbed.Regular.Reminder.Context.Location, on_replace: :delete)
+    embeds_many(:contexts, PolymorphicEmbed.Regular.Reminder.Context.Location,
+      on_replace: :delete
+    )
 
     timestamps()
   end
