@@ -153,6 +153,9 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
             valid?: errors == []
         }
 
+        %schema{} = form.source.data
+        %{type_field_atom: type_field} = PolymorphicEmbed.get_field_options(schema, field)
+
         %Phoenix.HTML.Form{
           source: changeset,
           impl: Phoenix.HTML.FormData.Ecto.Changeset,
@@ -162,7 +165,7 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
           errors: errors,
           data: data,
           params: params,
-          hidden: [__type__: to_string(type)],
+          hidden: [{type_field, to_string(type)}],
           options: options
         }
       end)
