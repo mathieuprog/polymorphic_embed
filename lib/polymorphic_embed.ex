@@ -62,6 +62,7 @@ defmodule PolymorphicEmbed do
 
   def cast_polymorphic_embed(changeset, field, cast_options \\ [])
 
+  # credo:disable-for-next-line
   def cast_polymorphic_embed(%Ecto.Changeset{} = changeset, field, cast_options) do
     field_options = get_field_options(changeset.data.__struct__, field)
 
@@ -100,26 +101,23 @@ defmodule PolymorphicEmbed do
       {:ok, map} when map == %{} and not array? ->
         changeset
 
-      {:ok, params_for_field} ->
-        cond do
-          array? and is_list(params_for_field) ->
-            cast_polymorphic_embeds_many(
-              changeset,
-              field,
-              changeset_fun,
-              params_for_field,
-              field_options
-            )
+      {:ok, params_for_field} when is_list(params_for_field) and array? ->
+        cast_polymorphic_embeds_many(
+          changeset,
+          field,
+          changeset_fun,
+          params_for_field,
+          field_options
+        )
 
-          not array? and is_map(params_for_field) ->
-            cast_polymorphic_embeds_one(
-              changeset,
-              field,
-              changeset_fun,
-              params_for_field,
-              field_options
-            )
-        end
+      {:ok, params_for_field} when is_map(params_for_field) and not array? ->
+        cast_polymorphic_embeds_one(
+          changeset,
+          field,
+          changeset_fun,
+          params_for_field,
+          field_options
+        )
     end
   end
 
