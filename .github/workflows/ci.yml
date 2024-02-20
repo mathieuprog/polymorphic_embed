@@ -19,7 +19,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - { elixir: 1.14, otp: 23 }
           - { elixir: 1.14, otp: 24 }
           - { elixir: 1.14, otp: 25 }
           - { elixir: 1.15, otp: 24 }
@@ -46,14 +45,14 @@ jobs:
           - 5432:5432
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         id: beam
         with:
           otp-version: ${{matrix.otp}}
           elixir-version: ${{matrix.elixir}}
       - name: Restore dependencies and build cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             _build
@@ -75,14 +74,14 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         id: beam
         with:
           otp-version: ${{ env.OTP_VERSION }}
           elixir-version: ${{ env.ELIXIR_VERSION}}
       - name: Restore dependencies and build cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             _build
@@ -90,7 +89,7 @@ jobs:
           key: ${{ runner.os }}-otp-${{ steps.beam.outputs.otp-version }}-elixir-${{ steps.beam.outputs.elixir-version }}-mix-${{ hashFiles('mix.lock') }}
           restore-keys: ${{ runner.os }}-otp-${{ steps.beam.outputs.otp-version }}-elixir-${{ steps.beam.outputs.elixir-version }}-
       - name: Restore PLT cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: plt_cache
         with:
           key: |
