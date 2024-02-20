@@ -1,6 +1,8 @@
 defmodule PolymorphicEmbed do
   use Ecto.ParameterizedType
 
+  alias Ecto.Changeset
+
   defmacro polymorphic_embeds_one(field_name, opts) do
     quote do
       field(unquote(field_name), PolymorphicEmbed, unquote(opts))
@@ -60,6 +62,7 @@ defmodule PolymorphicEmbed do
 
   def cast_polymorphic_embed(changeset, field, cast_options \\ [])
 
+  # credo:disable-for-next-line
   def cast_polymorphic_embed(%Ecto.Changeset{} = changeset, field, cast_options) do
     field_options = get_field_options(changeset.data.__struct__, field)
 
@@ -70,28 +73,9 @@ defmodule PolymorphicEmbed do
     required = Keyword.get(cast_options, :required, false)
     with = Keyword.get(cast_options, :with, nil)
 
-    changeset_fun = fn
-      struct, params when is_nil(with) ->
-        struct.__struct__.changeset(struct, params)
+    changeset_fun = &changeset_fun(&1, &2, with, types_metadata)
 
-      struct, params when is_list(with) ->
-        type = do_get_polymorphic_type(struct, types_metadata)
-
-        case Keyword.get(with, type) do
-          {module, function_name, args} ->
-            apply(module, function_name, [struct, params | args])
-
-          nil ->
-            struct.__struct__.changeset(struct, params)
-
-          fun ->
-            apply(fun, [struct, params])
-        end
-    end
-
-    (changeset.params || %{})
-    |> Map.fetch(to_string(field))
-    |> case do
+    case Map.fetch(changeset.params || %{}, to_string(field)) do
       :error when required ->
         if data_for_field = Map.fetch!(changeset.data, field) do
           data_for_field = autogenerate_id(data_for_field, changeset.action)
@@ -117,31 +101,47 @@ defmodule PolymorphicEmbed do
       {:ok, map} when map == %{} and not array? ->
         changeset
 
-      {:ok, params_for_field} ->
-        cond do
-          array? and is_list(params_for_field) ->
-            cast_polymorphic_embeds_many(
-              changeset,
-              field,
-              changeset_fun,
-              params_for_field,
-              field_options
-            )
+      {:ok, params_for_field} when is_list(params_for_field) and array? ->
+        cast_polymorphic_embeds_many(
+          changeset,
+          field,
+          changeset_fun,
+          params_for_field,
+          field_options
+        )
 
-          not array? and is_map(params_for_field) ->
-            cast_polymorphic_embeds_one(
-              changeset,
-              field,
-              changeset_fun,
-              params_for_field,
-              field_options
-            )
-        end
+      {:ok, params_for_field} when is_map(params_for_field) and not array? ->
+        cast_polymorphic_embeds_one(
+          changeset,
+          field,
+          changeset_fun,
+          params_for_field,
+          field_options
+        )
     end
   end
 
   def cast_polymorphic_embed(_, _, _) do
     raise "cast_polymorphic_embed/3 only accepts a changeset as first argument"
+  end
+
+  defp changeset_fun(struct, params, with, types_metadata) when is_list(with) do
+    type = do_get_polymorphic_type(struct, types_metadata)
+
+    case Keyword.get(with, type) do
+      {module, function_name, args} ->
+        apply(module, function_name, [struct, params | args])
+
+      nil ->
+        struct.__struct__.changeset(struct, params)
+
+      fun ->
+        apply(fun, [struct, params])
+    end
+  end
+
+  defp changeset_fun(struct, params, nil, _) do
+    struct.__struct__.changeset(struct, params)
   end
 
   defp cast_polymorphic_embeds_one(changeset, field, changeset_fun, params, field_options) do
@@ -155,27 +155,8 @@ defmodule PolymorphicEmbed do
 
     # We support partial update of the embed. If the type cannot be inferred from the parameters, or if the found type
     # hasn't changed, pass the data to the changeset.
-    action_and_struct =
-      case do_get_polymorphic_module_from_map(params, type_field, types_metadata) do
-        nil ->
-          if data_for_field do
-            {:update, data_for_field}
-          else
-            :type_not_found
-          end
 
-        module when is_nil(data_for_field) ->
-          {:insert, struct(module)}
-
-        module ->
-          if data_for_field.__struct__ != module do
-            {:insert, struct(module)}
-          else
-            {:update, data_for_field}
-          end
-      end
-
-    case action_and_struct do
+    case action_and_struct(params, type_field, types_metadata, data_for_field) do
       :type_not_found when on_type_not_found == :raise ->
         raise_cannot_infer_type_from_data(params)
 
@@ -203,6 +184,27 @@ defmodule PolymorphicEmbed do
     end
   end
 
+  defp action_and_struct(params, type_field, types_metadata, data_for_field) do
+    case do_get_polymorphic_module_from_map(params, type_field, types_metadata) do
+      nil ->
+        if data_for_field do
+          {:update, data_for_field}
+        else
+          :type_not_found
+        end
+
+      module when is_nil(data_for_field) ->
+        {:insert, struct(module)}
+
+      module ->
+        if data_for_field.__struct__ != module do
+          {:insert, struct(module)}
+        else
+          {:update, data_for_field}
+        end
+    end
+  end
+
   defp cast_polymorphic_embeds_many(changeset, field, changeset_fun, list_params, field_options) do
     %{
       types_metadata: types_metadata,
@@ -225,16 +227,7 @@ defmodule PolymorphicEmbed do
           module ->
             embed_changeset = changeset_fun.(struct(module), params)
             embed_changeset = %{embed_changeset | action: :insert}
-
-            case embed_changeset do
-              %{valid?: true} = embed_changeset ->
-                embed_changeset
-                |> Ecto.Changeset.apply_changes()
-                |> autogenerate_id(embed_changeset.action)
-
-              %{valid?: false} = embed_changeset ->
-                embed_changeset
-            end
+            maybe_apply_changes(embed_changeset)
         end
       end)
 
@@ -258,6 +251,14 @@ defmodule PolymorphicEmbed do
       end
     end
   end
+
+  defp maybe_apply_changes(%{valid?: true} = embed_changeset) do
+    embed_changeset
+    |> Ecto.Changeset.apply_changes()
+    |> autogenerate_id(embed_changeset.action)
+  end
+
+  defp maybe_apply_changes(%Changeset{valid?: false} = changeset), do: changeset
 
   @impl true
   def cast(_data, _params),
@@ -393,7 +394,7 @@ defmodule PolymorphicEmbed do
       schema.__schema__(:type, field)
     rescue
       _ in UndefinedFunctionError ->
-        raise ArgumentError, "#{inspect(schema)} is not an Ecto schema"
+        reraise ArgumentError, "#{inspect(schema)} is not an Ecto schema", __STACKTRACE__
     else
       {:parameterized, PolymorphicEmbed, options} -> Map.put(options, :array?, false)
       {:array, {:parameterized, PolymorphicEmbed, options}} -> Map.put(options, :array?, true)
@@ -438,37 +439,48 @@ defmodule PolymorphicEmbed do
   end
 
   defp merge_polymorphic_keys(map, changes, types, msg_func) do
-    Enum.reduce(types, map, fn
-      {field, {:parameterized, PolymorphicEmbed, _opts}}, acc ->
-        if changeset = Map.get(changes, field) do
-          case traverse_errors(changeset, msg_func) do
-            errors when errors == %{} -> acc
-            errors -> Map.put(acc, field, errors)
-          end
-        else
-          acc
-        end
-
-      {field, {:array, {:parameterized, PolymorphicEmbed, _opts}}}, acc ->
-        if changesets = Map.get(changes, field) do
-          {errors, all_empty?} =
-            Enum.map_reduce(changesets, true, fn changeset, all_empty? ->
-              errors = traverse_errors(changeset, msg_func)
-              {errors, all_empty? and errors == %{}}
-            end)
-
-          case all_empty? do
-            true -> acc
-            false -> Map.put(acc, field, errors)
-          end
-        else
-          acc
-        end
-
-      {_, _}, acc ->
-        acc
-    end)
+    Enum.reduce(types, map, &polymorphic_key_reducer(&1, &2, changes, msg_func))
   end
+
+  defp polymorphic_key_reducer(
+         {field, {:parameterized, PolymorphicEmbed, _opts}},
+         acc,
+         changes,
+         msg_func
+       ) do
+    if changeset = Map.get(changes, field) do
+      case traverse_errors(changeset, msg_func) do
+        errors when errors == %{} -> acc
+        errors -> Map.put(acc, field, errors)
+      end
+    else
+      acc
+    end
+  end
+
+  defp polymorphic_key_reducer(
+         {field, {:array, {:parameterized, PolymorphicEmbed, _opts}}},
+         acc,
+         changes,
+         msg_func
+       ) do
+    if changesets = Map.get(changes, field) do
+      {errors, all_empty?} =
+        Enum.map_reduce(changesets, true, fn changeset, all_empty? ->
+          errors = traverse_errors(changeset, msg_func)
+          {errors, all_empty? and errors == %{}}
+        end)
+
+      case all_empty? do
+        true -> acc
+        false -> Map.put(acc, field, errors)
+      end
+    else
+      acc
+    end
+  end
+
+  defp polymorphic_key_reducer({_, _}, acc, _, _), do: acc
 
   defp autogenerate_id([], _action), do: []
 

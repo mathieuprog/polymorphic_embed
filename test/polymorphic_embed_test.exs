@@ -5,7 +5,7 @@ defmodule PolymorphicEmbedTest do
 
   import Phoenix.Component
   import Phoenix.HTML
-  import Phoenix.HTML.Form
+  import PhoenixHTMLHelpers.Form
   import Phoenix.LiveViewTest
   import PolymorphicEmbed.HTML.Form
 
@@ -2346,7 +2346,7 @@ defmodule PolymorphicEmbedTest do
   defp liveview_form(assigns) do
     ~H"""
     <.form
-      let={f}
+      :let={f}
       for={@changeset}
     >
       <%= for sms_form <- polymorphic_embed_inputs_for f, @field do %>
