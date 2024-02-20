@@ -5,7 +5,7 @@ defmodule PolymorphicEmbedTest do
 
   import Phoenix.Component
   import Phoenix.HTML
-  import Phoenix.HTML.Form
+  import PhoenixHTMLHelpers.Form
   import Phoenix.LiveViewTest
   import PolymorphicEmbed.HTML.Form
 
@@ -1582,7 +1582,7 @@ defmodule PolymorphicEmbedTest do
   end
 
   describe "polymorphic_embed_inputs_for/2" do
-    test "generates forms that can be rendered" do
+    test "generates forms that can be rendered (custom type field/identify_by_fields)" do
       reminder_module = get_module(Reminder, :polymorphic)
 
       attrs = %{
@@ -1607,11 +1607,76 @@ defmodule PolymorphicEmbedTest do
         )
         |> Floki.parse_fragment!()
 
-      assert [input] = Floki.find(html, "#reminder_channel___type__")
+      assert [input] = Floki.find(html, "#reminder_channel_my_type_field")
+      assert Floki.attribute(input, "name") == ["reminder[channel][my_type_field]"]
       assert Floki.attribute(input, "type") == ["hidden"]
       assert Floki.attribute(input, "value") == ["email"]
 
       assert [input] = Floki.find(html, "#reminder_channel_number")
+      assert Floki.attribute(input, "type") == ["text"]
+    end
+
+    test "generates forms that can be rendered (custom type field)" do
+      reminder_module = get_module(Reminder, :polymorphic)
+
+      attrs = %{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is an Email reminder",
+        channel3: %{
+          my_type_field: "email"
+        }
+      }
+
+      changeset =
+        reminder_module
+        |> struct()
+        |> reminder_module.changeset(attrs)
+
+      html =
+        render_component(
+          &liveview_form/1,
+          %{changeset: changeset, field: :channel3}
+        )
+        |> Floki.parse_fragment!()
+
+      assert [input] = Floki.find(html, "#reminder_channel3_my_type_field")
+      assert Floki.attribute(input, "name") == ["reminder[channel3][my_type_field]"]
+      assert Floki.attribute(input, "type") == ["hidden"]
+      assert Floki.attribute(input, "value") == ["email"]
+    end
+
+    test "generates forms that can be rendered (default type field)" do
+      reminder_module = get_module(Reminder, :polymorphic)
+
+      attrs = %{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is an Email reminder",
+        channel2: %{
+          __type__: "email",
+          address: "a",
+          valid: true,
+          confirmed: true
+        }
+      }
+
+      changeset =
+        reminder_module
+        |> struct()
+        |> reminder_module.changeset(attrs)
+
+      html =
+        render_component(
+          &liveview_form/1,
+          %{changeset: changeset, field: :channel2}
+        )
+        |> Floki.parse_fragment!()
+
+      assert [input] = Floki.find(html, "#reminder_channel2___type__")
+      assert Floki.attribute(input, "name") == ["reminder[channel2][__type__]"]
+      assert Floki.attribute(input, "type") == ["hidden"]
+      assert Floki.attribute(input, "value") == ["email"]
+
+      assert [input] = Floki.find(html, "#reminder_channel2_number")
       assert Floki.attribute(input, "type") == ["text"]
     end
   end
@@ -1644,7 +1709,7 @@ defmodule PolymorphicEmbedTest do
       expected_contents =
         if(polymorphic?(generator),
           do:
-            ~s(<input id="reminder_channel___type__" name="reminder[channel][__type__]" type="hidden" value="email"><input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">),
+            ~s(<input id="reminder_channel_my_type_field" name="reminder[channel][my_type_field]" type="hidden" value="email"><input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">),
           else:
             ~s(<input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">)
         )
@@ -1665,7 +1730,7 @@ defmodule PolymorphicEmbedTest do
       expected_contents =
         if(polymorphic?(generator),
           do:
-            ~s(<input id="reminder_channel___type__" name="reminder[channel][__type__]" type="hidden" value="email"><input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">),
+            ~s(<input id="reminder_channel_my_type_field" name="reminder[channel][my_type_field]" type="hidden" value="email"><input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">),
           else:
             ~s(<input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">)
         )
@@ -1707,7 +1772,7 @@ defmodule PolymorphicEmbedTest do
       expected_contents =
         if(polymorphic?(generator),
           do:
-            ~s(<input id="reminder_channel___type__" name="reminder[channel][__type__]" type="hidden" value="sms"><input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="1">),
+            ~s(<input id="reminder_channel_my_type_field" name="reminder[channel][my_type_field]" type="hidden" value="sms"><input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="1">),
           else:
             ~s(<input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="1">)
         )
@@ -1728,7 +1793,7 @@ defmodule PolymorphicEmbedTest do
       expected_contents =
         if(polymorphic?(generator),
           do:
-            ~s(<input id="reminder_channel___type__" name="reminder[channel][__type__]" type="hidden" value="sms"><input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="1">),
+            ~s(<input id="reminder_channel_my_type_field" name="reminder[channel][my_type_field]" type="hidden" value="sms"><input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="1">),
           else:
             ~s(<input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="1">)
         )
@@ -2045,7 +2110,7 @@ defmodule PolymorphicEmbedTest do
   end
 
   describe "Form.get_polymorphic_type/3" do
-    test "returns type from changeset" do
+    test "returns type from changeset via identify_by_fields" do
       reminder_module = get_module(Reminder, :polymorphic)
 
       attrs = %{
@@ -2094,9 +2159,9 @@ defmodule PolymorphicEmbedTest do
       end)
     end
 
-    test "returns type from string parameters" do
+    test "returns type from changeset via custom type field" do
       reminder_module = get_module(Reminder, :polymorphic)
-      attrs = %{"channel" => %{"my_type_field" => "email"}}
+      attrs = %{"channel" => %{"my_type_field" => "sms"}}
 
       changeset =
         reminder_module
@@ -2105,15 +2170,15 @@ defmodule PolymorphicEmbedTest do
 
       safe_form_for(changeset, fn f ->
         assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel) ==
-                 :email
+                 :sms
 
         text_input(f, :text)
       end)
     end
 
-    test "returns type from atom parameters" do
+    test "returns type from map with default type field (string)" do
       reminder_module = get_module(Reminder, :polymorphic)
-      attrs = %{channel: %{my_type_field: :email}}
+      attrs = %{"channel2" => %{"__type__" => "email"}}
 
       changeset =
         reminder_module
@@ -2121,14 +2186,65 @@ defmodule PolymorphicEmbedTest do
         |> reminder_module.changeset(attrs)
 
       safe_form_for(changeset, fn f ->
-        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel) ==
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel2) ==
                  :email
 
         text_input(f, :text)
       end)
     end
 
-    test "returns type from parameters while type field is custom" do
+    test "returns type from map with default type field (atom)" do
+      reminder_module = get_module(Reminder, :polymorphic)
+      attrs = %{"channel2" => %{__type__: :email}}
+
+      changeset =
+        reminder_module
+        |> struct()
+        |> reminder_module.changeset(attrs)
+
+      safe_form_for(changeset, fn f ->
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel2) ==
+                 :email
+
+        text_input(f, :text)
+      end)
+    end
+
+    test "returns type from map with custom type field (string)" do
+      reminder_module = get_module(Reminder, :polymorphic)
+      attrs = %{"channel3" => %{"my_type_field" => "email"}}
+
+      changeset =
+        reminder_module
+        |> struct()
+        |> reminder_module.changeset(attrs)
+
+      safe_form_for(changeset, fn f ->
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel3) ==
+                 :email
+
+        text_input(f, :text)
+      end)
+    end
+
+    test "returns type from map with custom type field (atom)" do
+      reminder_module = get_module(Reminder, :polymorphic)
+      attrs = %{"channel3" => %{my_type_field: "email"}}
+
+      changeset =
+        reminder_module
+        |> struct()
+        |> reminder_module.changeset(attrs)
+
+      safe_form_for(changeset, fn f ->
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel3) ==
+                 :email
+
+        text_input(f, :text)
+      end)
+    end
+
+    test "returns nil with map when custom type field is configured and default type field is set" do
       reminder_module = get_module(Reminder, :polymorphic)
       attrs = %{channel: %{__type__: :email}}
 
@@ -2230,7 +2346,7 @@ defmodule PolymorphicEmbedTest do
   defp liveview_form(assigns) do
     ~H"""
     <.form
-      let={f}
+      :let={f}
       for={@changeset}
     >
       <%= for sms_form <- polymorphic_embed_inputs_for f, @field do %>
