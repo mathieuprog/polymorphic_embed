@@ -28,3 +28,5 @@ polymorphic_embed-*.tar
 
 # Ignore Dialyzer plts file
 .plts
+
+.elixir_ls
