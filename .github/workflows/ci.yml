@@ -1,8 +1,8 @@
 name: CI
 
 env:
-  ELIXIR_VERSION: "1.14"
-  OTP_VERSION: "25.1"
+  ELIXIR_VERSION: "1.16"
+  OTP_VERSION: "26"
 
 on:
   push:
@@ -18,11 +18,16 @@ jobs:
     name: Test OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
     strategy:
       matrix:
-        otp: ["24.3", "25.1"]
-        elixir: ["1.13", "1.14"]
-        exclude:
-          - otp: "25.1"
-            elixir: "1.13"
+        include:
+          - { elixir: 1.14, otp: 23 }
+          - { elixir: 1.14, otp: 24 }
+          - { elixir: 1.14, otp: 25 }
+          - { elixir: 1.15, otp: 24 }
+          - { elixir: 1.15, otp: 25 }
+          - { elixir: 1.15, otp: 26 }
+          - { elixir: 1.16, otp: 24 }
+          - { elixir: 1.16, otp: 25 }
+          - { elixir: 1.16, otp: 26 }
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
