@@ -1217,6 +1217,121 @@ defmodule PolymorphicEmbedTest do
 
       assert Enum.at(reminder.contexts, 0).id != Enum.at(updated_reminder.contexts, 0).id
       assert Enum.at(reminder.contexts, 1).id != Enum.at(updated_reminder.contexts, 1).id
+
+      # Assert that we have same ids when the provided context element has an id
+      attrs = %{
+        contexts: [
+          %{
+            __type__: "device",
+            id: Enum.at(reminder.contexts, 0).id,
+            ref: "12345",
+            type: "cellphone",
+            address: "address"
+          },
+          %{
+            __type__: "age",
+            age: "aquarius",
+            address: "address"
+          }
+        ]
+      }
+
+      updated_reminder =
+        reminder
+        |> reminder_module.changeset(attrs)
+        |> Repo.update!()
+
+      assert Enum.at(reminder.contexts, 0).id == Enum.at(updated_reminder.contexts, 0).id
+      assert Enum.at(reminder.contexts, 1).id != Enum.at(updated_reminder.contexts, 1).id
+    end
+  end
+
+  test "supports update when struct is provided with id in lists of polymorphic embeds" do
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+
+      attrs = %{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is a reminder with multiple contexts #{generator}",
+        channel: %{
+          my_type_field: "sms",
+          number: "02/807.05.53",
+          country_code: 1,
+          provider: %{
+            __type__: "twilio",
+            api_key: "foo"
+          }
+        },
+        contexts: [
+          %{
+            __type__: "device",
+            ref: "12345",
+            type: "cellphone",
+            address: "address"
+          },
+          %{
+            __type__: "age",
+            age: "aquarius",
+            address: "address"
+          }
+        ]
+      }
+
+      reminder =
+        struct(reminder_module)
+        |> reminder_module.changeset(attrs)
+        |> Repo.insert!()
+
+      Enum.each(reminder.contexts, fn context ->
+        assert context.id
+      end)
+
+      reminder =
+        reminder_module
+        |> QueryBuilder.where(text: "This is a reminder with multiple contexts #{generator}")
+        |> Repo.one()
+
+      assert reminder.contexts |> length() == 2
+
+      Enum.each(reminder.contexts, fn context ->
+        assert context.id
+      end)
+
+      if polymorphic?(generator) do
+        assert Enum.at(reminder.contexts, 0).ref == "12345"
+        assert Enum.at(reminder.contexts, 0).type == "cellphone"
+        assert Enum.at(reminder.contexts, 1).age == "aquarius"
+      else
+        assert Enum.at(reminder.contexts, 0).address == "address"
+        assert Enum.at(reminder.contexts, 1).address == "address"
+      end
+
+      # add new list of contexts and assert that we have different ids
+
+      attrs = %{
+        contexts: [
+          %{
+            __type__: "device",
+            id: Enum.at(reminder.contexts, 0).id,
+            ref: "12345",
+            type: "cellphone",
+            address: "address"
+          },
+          %{
+            __type__: "age",
+            age: "aquarius",
+            address: "address"
+          }
+        ]
+      }
+
+      updated_reminder =
+        reminder
+        |> reminder_module.changeset(attrs)
+        |> Repo.update!()
+
+      assert Enum.at(reminder.contexts, 0).id == Enum.at(updated_reminder.contexts, 0).id
+      assert Enum.at(reminder.contexts, 1).id != Enum.at(updated_reminder.contexts, 1).id
     end
   end
 
