@@ -84,7 +84,7 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
 
         <%= inputs_for f, :reminders, fn reminder_form -> %>
           <%= polymorphic_embed_inputs_for reminder_form, :channel, fn channel_form -> %>
-            <%= case get_polymorphic_type(channel_form, Reminder, :channel) do %>
+            <%= case get_polymorphic_type(reminder_form, Reminder, :channel) do %>
               <% :sms -> %>
                 <%= label poly_form, :number %>
                 <%= text_input poly_form, :number %>
