@@ -57,14 +57,15 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
           <%= for channel_form <- polymorphic_embed_inputs_for f, :channel do %>
             <%= hidden_inputs_for(channel_form) %>
 
-            <%= case get_polymorphic_type(channel_form, Reminder, :channel) do %>
+            <%= case get_polymorphic_type(f, Reminder, :channel) do %>
               <% :sms -> %>
                 <%= label channel_form, :number %>
                 <%= text_input channel_form, :number %>
 
               <% :email -> %>
-                <%= label channel_form, :email %>
-                <%= text_input channel_form, :email %>
+                <%= label channel_form, :email_address %>
+                <%= text_input channel_form, :address %>
+            <% end %>
           <% end %>
         </.form>
     """
@@ -90,8 +91,8 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
                 <%= text_input poly_form, :number %>
 
               <% :email -> %>
-                <%= label poly_form, :email %>
-                <%= text_input poly_form, :email %>
+                <%= label poly_form, :email_address %>
+                <%= text_input poly_form, :address %>
             <% end %>
           <% end %>
         <% end %>
