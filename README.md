@@ -94,7 +94,7 @@ In your migration file, you may use the type `:map` for both `polymorphic_embeds
 add(:channel, :map)
 ```
 
-[It is not recommended](https://hexdocs.pm/ecto/3.8.4/Ecto.Schema.html#embeds_many/3) to use `{:array, :map}` for a list of embeds.
+[It is not recommended](https://hexdocs.pm/ecto/3.11.2/Ecto.Schema.html#embeds_many/3) to use `{:array, :map}` for a list of embeds.
 
 ### `cast_polymorphic_embed/3`
 
@@ -272,7 +272,7 @@ Add `polymorphic_embed` for Elixir as a dependency in your `mix.exs` file:
 ```elixir
 def deps do
   [
-    {:polymorphic_embed, "~> 3.0.6"}
+    {:polymorphic_embed, "~> 3.0.7"}
   ]
 end
 ```
