@@ -2,8 +2,6 @@ import Config
 
 config :logger, level: :warning
 
-config :phoenix, :json_library, Jason
-
 config :polymorphic_embed,
   ecto_repos: [PolymorphicEmbed.Repo]
 
