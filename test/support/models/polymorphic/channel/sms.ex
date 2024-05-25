@@ -41,13 +41,13 @@ defmodule PolymorphicEmbed.Channel.SMS do
     |> validate_required([:number, :country_code])
   end
 
-  def custom_changeset(struct, attrs, _foo, _bar) do
+  def custom_changeset(struct, attrs) do
     struct
     |> changeset(attrs)
     |> cast(attrs, [:custom])
   end
 
-  def custom_changeset2(struct, attrs) do
+  def custom_changeset2(struct, attrs, _foo, _bar) do
     struct
     |> changeset(attrs)
     |> cast(attrs, [:custom])

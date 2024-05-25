@@ -774,7 +774,7 @@ defmodule PolymorphicEmbedTest do
 
     insert_result =
       struct(reminder_module)
-      |> reminder_module.custom_changeset2(sms_reminder_attrs)
+      |> reminder_module.custom_changeset(sms_reminder_attrs)
       |> Repo.insert()
 
     assert {:ok, reminder} = insert_result

@@ -73,8 +73,7 @@ defmodule PolymorphicEmbed.Reminder do
     |> cast(values, [:date, :text])
     |> cast_polymorphic_embed(:channel,
       with: [
-        sms: {PolymorphicEmbed.Channel.SMS, :custom_changeset, ["foo", "bar"]},
-        email: {PolymorphicEmbed.Channel.Email, :custom_changeset, ["foo", "bar"]}
+        sms: &PolymorphicEmbed.Channel.SMS.custom_changeset/2
       ]
     )
     |> validate_required(:date)
@@ -85,7 +84,8 @@ defmodule PolymorphicEmbed.Reminder do
     |> cast(values, [:date, :text])
     |> cast_polymorphic_embed(:channel,
       with: [
-        sms: &PolymorphicEmbed.Channel.SMS.custom_changeset2/2
+        sms: {PolymorphicEmbed.Channel.SMS, :custom_changeset2, ["foo", "bar"]},
+        email: {PolymorphicEmbed.Channel.Email, :custom_changeset2, ["foo", "bar"]}
       ]
     )
     |> validate_required(:date)
@@ -96,7 +96,7 @@ defmodule PolymorphicEmbed.Reminder do
     |> cast(values, [:date, :text])
     |> cast_polymorphic_embed(:channel,
       with: [
-        sms: &PolymorphicEmbed.Channel.SMS.custom_changeset2/2
+        sms: &PolymorphicEmbed.Channel.SMS.custom_changeset/2
       ]
     )
     |> validate_required(:date)
