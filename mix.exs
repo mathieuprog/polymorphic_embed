@@ -47,7 +47,7 @@ defmodule PolymorphicEmbed.MixProject do
 
   defp deps do
     [
-      {:ecto, "~> 3.11"},
+      {:ecto, "~> 3.11.2"},
       {:jason, "~> 1.4"},
       {:phoenix_html, "~> 4.0", optional: true},
       {:phoenix_html_helpers, "~> 1.0", optional: true},
