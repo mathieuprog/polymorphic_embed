@@ -55,6 +55,7 @@ defmodule PolymorphicEmbed do
     Ensure that the types are specified directly within the macro call to avoid these issues,
     or refactor your code to eliminate references that cannot be expanded.
     """)
+
     types
   end
 
