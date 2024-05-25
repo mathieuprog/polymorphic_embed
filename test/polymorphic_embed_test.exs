@@ -1260,6 +1260,32 @@ defmodule PolymorphicEmbedTest do
 
       assert Enum.at(reminder.contexts, 0).id != Enum.at(updated_reminder.contexts, 0).id
       assert Enum.at(reminder.contexts, 1).id != Enum.at(updated_reminder.contexts, 1).id
+
+      # Assert that we have same ids when the provided context element has an id
+      attrs = %{
+        contexts: [
+          %{
+            __type__: "device",
+            id: Enum.at(reminder.contexts, 0).id,
+            ref: "12345",
+            type: "cellphone",
+            address: "address"
+          },
+          %{
+            __type__: "age",
+            age: "aquarius",
+            address: "address"
+          }
+        ]
+      }
+
+      updated_reminder =
+        reminder
+        |> reminder_module.changeset(attrs)
+        |> Repo.update!()
+
+      assert Enum.at(reminder.contexts, 0).id == Enum.at(updated_reminder.contexts, 0).id
+      assert Enum.at(reminder.contexts, 1).id != Enum.at(updated_reminder.contexts, 1).id
     end
   end
 

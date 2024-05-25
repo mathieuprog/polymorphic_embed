@@ -262,6 +262,8 @@ defmodule PolymorphicEmbed do
       type_field: type_field
     } = field_options
 
+    list_data_for_field = Map.fetch!(changeset.data, field)
+
     embeds =
       Enum.map(list_params, fn params ->
         case do_get_polymorphic_module_from_map(params, type_field, types_metadata) do
@@ -275,8 +277,18 @@ defmodule PolymorphicEmbed do
             :ignore
 
           module ->
-            embed_changeset = changeset_fun.(struct(module), params)
-            embed_changeset = %{embed_changeset | action: :insert}
+            data_for_field =
+              Enum.find(list_data_for_field, fn datum ->
+                datum.id != nil and datum.id == params[:id] and datum.__struct__ == module
+              end)
+
+            embed_changeset =
+              if data_for_field do
+                %{changeset_fun.(data_for_field, params) | action: :update}
+              else
+                %{changeset_fun.(struct(module), params) | action: :insert}
+              end
+
             maybe_apply_changes(embed_changeset)
         end
       end)
