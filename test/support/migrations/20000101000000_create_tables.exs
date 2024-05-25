@@ -11,6 +11,7 @@ defmodule PolymorphicEmbed.CreateTables do
       add(:channel3, :map)
       add(:contexts, :map)
       add(:contexts2, :map)
+      add(:contexts3, :map)
 
       timestamps()
     end

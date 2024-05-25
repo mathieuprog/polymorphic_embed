@@ -278,8 +278,12 @@ defmodule PolymorphicEmbed do
 
           module ->
             data_for_field =
-              Enum.find(list_data_for_field, fn datum ->
-                datum.id != nil and datum.id == params[:id] and datum.__struct__ == module
+              Enum.find(list_data_for_field, fn
+                %{id: id} = datum when not is_nil(id) ->
+                  id == params[:id] and datum.__struct__ == module
+
+                _ ->
+                  nil
               end)
 
             embed_changeset =

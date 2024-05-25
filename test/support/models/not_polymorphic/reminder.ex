@@ -13,6 +13,10 @@ defmodule PolymorphicEmbed.Regular.Reminder do
       on_replace: :delete
     )
 
+    embeds_many(:contexts3, PolymorphicEmbed.Regular.Reminder.Context.DeviceNoId,
+      on_replace: :delete
+    )
+
     timestamps()
   end
 
@@ -22,6 +26,7 @@ defmodule PolymorphicEmbed.Regular.Reminder do
     |> validate_required(:date)
     |> cast_embed(:channel)
     |> cast_embed(:contexts)
+    |> cast_embed(:contexts3)
   end
 
   def custom_changeset(struct, attrs) do

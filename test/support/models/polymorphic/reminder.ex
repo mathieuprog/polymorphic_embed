@@ -56,6 +56,15 @@ defmodule PolymorphicEmbed.Reminder do
       on_replace: :delete
     )
 
+    polymorphic_embeds_many(:contexts3,
+      types: [
+        location: PolymorphicEmbed.Reminder.Context.Location,
+        age: PolymorphicEmbed.Reminder.Context.Age,
+        device: PolymorphicEmbed.Reminder.Context.DeviceNoId
+      ],
+      on_replace: :delete
+    )
+
     timestamps()
   end
 
@@ -66,6 +75,7 @@ defmodule PolymorphicEmbed.Reminder do
     |> cast_polymorphic_embed(:channel)
     |> cast_polymorphic_embed(:contexts)
     |> cast_polymorphic_embed(:contexts2)
+    |> cast_polymorphic_embed(:contexts3)
   end
 
   def custom_changeset(struct, values) do

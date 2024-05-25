@@ -1203,6 +1203,18 @@ defmodule PolymorphicEmbedTest do
             age: "aquarius",
             address: "address"
           }
+        ],
+        contexts3: [
+          %{
+            __type__: "device",
+            ref: "12345",
+            type: "cellphone"
+          },
+          %{
+            __type__: "device",
+            ref: "56789",
+            type: "laptop"
+          }
         ]
       }
 
@@ -1212,7 +1224,11 @@ defmodule PolymorphicEmbedTest do
         |> Repo.insert!()
 
       Enum.each(reminder.contexts, fn context ->
-        assert context.id
+        assert Map.has_key?(context, :id)
+      end)
+
+      Enum.each(reminder.contexts3, fn context ->
+        refute Map.has_key?(context, :id)
       end)
 
       reminder =
@@ -1223,7 +1239,7 @@ defmodule PolymorphicEmbedTest do
       assert reminder.contexts |> length() == 2
 
       Enum.each(reminder.contexts, fn context ->
-        assert context.id
+        assert Map.has_key?(context, :id)
       end)
 
       if polymorphic?(generator) do
@@ -1286,6 +1302,27 @@ defmodule PolymorphicEmbedTest do
 
       assert Enum.at(reminder.contexts, 0).id == Enum.at(updated_reminder.contexts, 0).id
       assert Enum.at(reminder.contexts, 1).id != Enum.at(updated_reminder.contexts, 1).id
+
+      # Make sure it also works for embeds without ids (`@primary_key false`)
+      attrs = %{
+        contexts3: [
+          %{
+            __type__: "device",
+            ref: "12345",
+            type: "cellphone"
+          },
+          %{
+            __type__: "device",
+            ref: "56789",
+            type: "laptop"
+          }
+        ]
+      }
+
+      assert {:ok, _} =
+               reminder
+               |> reminder_module.changeset(attrs)
+               |> Repo.update()
     end
   end
 
