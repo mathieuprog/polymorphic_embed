@@ -5,6 +5,7 @@
   * Default value for polymorphic list of embeds is `[]` instead of `nil` (following `embeds_many/3`)
   * Support Phoenix HTML 4.0
   * Avoid compile-time dependencies between parent and polymorphic embedded schemas
+  * Support updating list of embeds while retaining ids
 
 ### Migration from 2.x to 3.x
 
