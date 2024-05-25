@@ -80,7 +80,7 @@ defmodule PolymorphicEmbed.MixProject do
 
   defp package do
     [
-      licenses: ["Apache 2.0"],
+      licenses: ["Apache-2.0"],
       maintainers: ["Mathieu Decaffmeyer"],
       links: %{
         "GitHub" => "https://github.com/mathieuprog/polymorphic_embed",
