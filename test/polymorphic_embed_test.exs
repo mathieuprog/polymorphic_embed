@@ -1921,7 +1921,11 @@ defmodule PolymorphicEmbedTest do
                               [count: 3, validation: :length, kind: :min, type: :string]}
                          ]
                 else
-                  assert f.errors == []
+                  assert f.errors == [
+                           name:
+                             {"can't be blank",
+                              [validation: :required]}
+                         ]
                 end
 
                 "from safe_inputs_for #{generator}"
@@ -2016,7 +2020,12 @@ defmodule PolymorphicEmbedTest do
             assert contents == expected_contents
 
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
-            assert f.errors == []
+
+            assert %{
+              number: {"can't be blank", [validation: :required]},
+              country_code: {"can't be blank", [validation: :required]},
+              provider: {"can't be blank", [validation: :required]}
+            } = Map.new(f.errors)
 
             "from safe_inputs_for #{generator}"
           end)
