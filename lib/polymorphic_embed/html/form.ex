@@ -153,8 +153,6 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
             List.wrap(data)
         end
 
-      num_entries = length(list_data)
-
       list_data
       |> Enum.with_index()
       |> Enum.map(fn {data, i} ->
