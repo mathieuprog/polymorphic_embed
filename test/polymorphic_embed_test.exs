@@ -682,43 +682,6 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
-  test "custom changeset by passing MFA" do
-    for generator <- @generators do
-      reminder_module = get_module(Reminder, generator)
-      sms_module = get_module(Channel.SMS, generator)
-
-      sms_reminder_attrs = %{
-        date: ~U[2020-05-28 02:57:19Z],
-        text: "This is an SMS reminder #{generator}",
-        channel: %{
-          my_type_field: "sms",
-          number: "02/807.05.53",
-          country_code: 1,
-          attempts: [],
-          provider: %{__type__: "twilio", api_key: "somekey"},
-          custom: true
-        }
-      }
-
-      insert_result =
-        struct(reminder_module)
-        |> reminder_module.custom_changeset(sms_reminder_attrs)
-        |> Repo.insert()
-
-      assert {:ok, reminder} = insert_result
-      assert reminder.channel.custom
-
-      %reminder_module{} = reminder
-
-      reminder =
-        reminder_module
-        |> QueryBuilder.where(text: "This is an SMS reminder #{generator}")
-        |> Repo.one()
-
-      assert sms_module == reminder.channel.__struct__
-    end
-  end
-
   test "custom changeset by passing function" do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)
@@ -739,7 +702,7 @@ defmodule PolymorphicEmbedTest do
 
       insert_result =
         struct(reminder_module)
-        |> reminder_module.custom_changeset2(sms_reminder_attrs)
+        |> reminder_module.custom_changeset(sms_reminder_attrs)
         |> Repo.insert()
 
       assert {:ok, reminder} = insert_result

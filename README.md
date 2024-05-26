@@ -104,12 +104,12 @@ add(:channel, :map)
 
 * `:required` – if the embed is a required field.
 
-* `:with` – allows you to specify a custom changeset. Either pass an MFA or a function:
+* `:with` – allows you to specify a custom changeset.
 ```elixir
 changeset
 |> cast_polymorphic_embed(:channel,
   with: [
-    sms: {SMS, :custom_changeset, ["hello"]},
+    sms: &SMS.custom_changeset/2,
     email: &Email.custom_changeset/2
   ]
 )

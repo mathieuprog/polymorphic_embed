@@ -46,10 +46,4 @@ defmodule PolymorphicEmbed.Channel.SMS do
     |> changeset(attrs)
     |> cast(attrs, [:custom])
   end
-
-  def custom_changeset2(struct, attrs, _foo, _bar) do
-    struct
-    |> changeset(attrs)
-    |> cast(attrs, [:custom])
-  end
 end
