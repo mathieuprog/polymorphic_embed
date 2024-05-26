@@ -8,6 +8,7 @@ defmodule PolymorphicEmbedTest do
   import PhoenixHTMLHelpers.Form
   import Phoenix.LiveViewTest
   import PolymorphicEmbed.HTML.Form
+  import PolymorphicEmbed.HTML.Component
 
   alias PolymorphicEmbed.Repo
 
@@ -1899,6 +1900,104 @@ defmodule PolymorphicEmbedTest do
            ]
   end
 
+  describe "polymorphic_embed_inputs_for/1" do
+    test "generates forms that can be rendered (custom type field/identify_by_fields)" do
+      reminder_module = get_module(Reminder, :polymorphic)
+
+      attrs = %{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is an Email reminder",
+        channel: %{
+          address: "a",
+          valid: true,
+          confirmed: true
+        }
+      }
+
+      changeset =
+        reminder_module
+        |> struct()
+        |> reminder_module.changeset(attrs)
+
+      html =
+        render_component(
+          &liveview_form/1,
+          %{changeset: changeset, field: :channel}
+        )
+        |> Floki.parse_fragment!()
+
+      assert [input] = Floki.find(html, "#reminder_channel_my_type_field")
+      assert Floki.attribute(input, "name") == ["reminder[channel][my_type_field]"]
+      assert Floki.attribute(input, "type") == ["hidden"]
+      assert Floki.attribute(input, "value") == ["email"]
+
+      assert [input] = Floki.find(html, "#reminder_channel_number")
+      assert Floki.attribute(input, "type") == ["text"]
+    end
+
+    test "generates forms that can be rendered (custom type field)" do
+      reminder_module = get_module(Reminder, :polymorphic)
+
+      attrs = %{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is an Email reminder",
+        channel3: %{
+          my_type_field: "email"
+        }
+      }
+
+      changeset =
+        reminder_module
+        |> struct()
+        |> reminder_module.changeset(attrs)
+
+      html =
+        render_component(
+          &liveview_form_component/1,
+          %{changeset: changeset, field: :channel3}
+        )
+        |> Floki.parse_fragment!()
+
+      assert [input] = Floki.find(html, ~s([name="reminder[channel3][my_type_field]"]))
+      assert Floki.attribute(input, "type") == ["hidden"]
+      assert Floki.attribute(input, "value") == ["email"]
+    end
+
+    test "generates forms that can be rendered (default type field)" do
+      reminder_module = get_module(Reminder, :polymorphic)
+
+      attrs = %{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is an Email reminder",
+        channel2: %{
+          __type__: "email",
+          address: "a",
+          valid: true,
+          confirmed: true
+        }
+      }
+
+      changeset =
+        reminder_module
+        |> struct()
+        |> reminder_module.changeset(attrs)
+
+      html =
+        render_component(
+          &liveview_form_component/1,
+          %{changeset: changeset, field: :channel2}
+        )
+        |> Floki.parse_fragment!()
+
+      assert [input] = Floki.find(html, ~s([name="reminder[channel2][__type__]"]))
+      assert Floki.attribute(input, "type") == ["hidden"]
+      assert Floki.attribute(input, "value") == ["email"]
+
+      assert [input] = Floki.find(html, "#reminder_channel2_0_number")
+      assert Floki.attribute(input, "type") == ["text"]
+    end
+  end
+
   describe "polymorphic_embed_inputs_for/2" do
     test "generates forms that can be rendered (custom type field/identify_by_fields)" do
       reminder_module = get_module(Reminder, :polymorphic)
@@ -1999,7 +2098,7 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
-  test "inputs_for/4" do
+  test "polymorphic_embed_inputs_for/4" do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)
 
@@ -2063,7 +2162,7 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
-  test "inputs_for/4 for list of embeds" do
+  test "polymorphic_embed_inputs_for/4 for list of embeds" do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)
 
@@ -2141,7 +2240,7 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
-  test "inputs_for/4 after invalid insert" do
+  test "polymorphic_embed_inputs_for/4 after invalid insert" do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)
 
@@ -2210,7 +2309,7 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
-  test "inputs_for/4 after invalid insert with valid nested struct" do
+  test "polymorphic_embed_inputs_for/4 after invalid insert with valid nested struct" do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)
 
@@ -2751,6 +2850,19 @@ defmodule PolymorphicEmbedTest do
         <%= hidden_inputs_for(sms_form) %>
         <%= text_input sms_form, :number %>
       <% end %>
+    </.form>
+    """
+  end
+
+  defp liveview_form_component(assigns) do
+    ~H"""
+    <.form
+      :let={f}
+      for={@changeset}
+    >
+      <.polymorphic_embed_inputs_for field={f[@field]} :let={sms_form}>
+        <%= text_input sms_form, :number %>
+      </.polymorphic_embed_inputs_for>
     </.form>
     """
   end
