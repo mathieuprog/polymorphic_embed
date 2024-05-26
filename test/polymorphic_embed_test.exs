@@ -1870,6 +1870,35 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  test "embeds_many with sort_param but no assoc param (sort_create function)" do
+    reminder_module = get_module(Reminder, :polymorphic)
+
+    attrs = %{
+      "date" => ~U[2020-05-28 02:57:19Z],
+      "text" => "This is a reminder with multiple contexts",
+      "channel" => %{
+        "my_type_field" => "sms",
+        "number" => "02/807.05.53",
+        "country_code" => 1,
+        "provider" => %{
+          "__type__" => "twilio",
+          "api_key" => "foo"
+        }
+      },
+      "contexts2_drop" => [],
+      "contexts2_sort" => ["on"]
+    }
+
+    assert changeset =
+             %Ecto.Changeset{valid?: false} =
+             struct(reminder_module)
+             |> reminder_module.changeset(attrs)
+
+    assert Enum.at(changeset.changes.contexts2, 0).errors == [
+             address: {"can't be blank", [validation: :required]}
+           ]
+  end
+
   describe "polymorphic_embed_inputs_for/2" do
     test "generates forms that can be rendered (custom type field/identify_by_fields)" do
       reminder_module = get_module(Reminder, :polymorphic)

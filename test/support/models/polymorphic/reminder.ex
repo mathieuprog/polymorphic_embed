@@ -78,7 +78,11 @@ defmodule PolymorphicEmbed.Reminder do
       default_type_on_sort_create: :location,
       drop_param: :contexts_drop
     )
-    |> cast_polymorphic_embed(:contexts2)
+    |> cast_polymorphic_embed(:contexts2,
+      sort_param: :contexts2_sort,
+      default_type_on_sort_create: fn -> :location end,
+      drop_param: :contexts2_drop
+    )
     |> cast_polymorphic_embed(:contexts3)
   end
 

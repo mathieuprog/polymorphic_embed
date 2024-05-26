@@ -208,6 +208,12 @@ defmodule PolymorphicEmbed do
         %{type_field_atom => first_type}
 
       _ ->
+        default_type =
+          case default_type do
+            fun when is_function(fun, 0) -> fun.()
+            _ -> default_type
+          end
+
         # If type is provided, ensure it exists in types_metadata
         unless Enum.find(types_metadata, &(&1.type === default_type)) do
           raise "Incorrect type atom #{inspect(default_type)}"
