@@ -1,11 +1,22 @@
 # Changelog
 
+## 4.0.x
+
+  * Support `sort_param` and `drop_param` for list of embeds
+  * Add `PolymorphicEmbed.HTML.Component.polymorphic_embed_inputs_for/1`
+    (similar to `Phoenix.Component.inputs_for/1`)
+  * Support updating list of embeds while retaining ids
+  * Fix form input rendering for list of embeds
+  * Fix traverse_errors for nested embeds
+
+  **Breaking Change**: The form helper `get_polymorphic_type/3` has been updated to `get_polymorphic_type/2`.
+  The module name parameter (previously the second parameter) has been removed.
+
 ## 3.0.x
 
   * Default value for polymorphic list of embeds is `[]` instead of `nil` (following `embeds_many/3`)
   * Support Phoenix HTML 4.0
   * Avoid compile-time dependencies between parent and polymorphic embedded schemas
-  * Support updating list of embeds while retaining ids
 
 ### Migration from 2.x to 3.x
 

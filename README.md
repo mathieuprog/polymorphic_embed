@@ -228,7 +228,7 @@ You may use `polymorphic_embed_inputs_for/2` when working with LiveView.
   <%= for channel_form <- polymorphic_embed_inputs_for f, :channel do %>
     <%= hidden_inputs_for(channel_form) %>
 
-    <%= case get_polymorphic_type(f, Reminder, :channel) do %>
+    <%= case get_polymorphic_type(f, :channel) do %>
       <% :sms -> %>
         <%= label channel_form, :number %>
         <%= text_input channel_form, :number %>
@@ -246,7 +246,7 @@ Using this function, you have to render the necessary hidden inputs manually as 
 ### Get the type of a polymorphic embed
 
 Sometimes you need to serialize the polymorphic embed and, once in the front-end, need to distinguish them.
-`get_polymorphic_type/3` returns the type of the polymorphic embed:
+`PolymorphicEmbed.get_polymorphic_type/3` returns the type of the polymorphic embed:
 
 ```elixir
 PolymorphicEmbed.get_polymorphic_type(Reminder, :channel, SMS) == :sms
@@ -272,7 +272,7 @@ Add `polymorphic_embed` for Elixir as a dependency in your `mix.exs` file:
 ```elixir
 def deps do
   [
-    {:polymorphic_embed, "~> 3.0.7"}
+    {:polymorphic_embed, "~> 4.0.0"}
   ]
 end
 ```
