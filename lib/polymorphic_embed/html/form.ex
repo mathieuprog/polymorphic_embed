@@ -176,7 +176,11 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
         }
 
         %schema{} = source_changeset.data
-        %{type_field_atom: type_field} = PolymorphicEmbed.get_field_options(schema, field)
+
+        field_options = PolymorphicEmbed.get_field_options(schema, field)
+        type_field_atom = Map.get(field_options, :type_field_atom, :__type__)
+        # correctly set id and name for embeds_many inputs
+        array? = Map.get(field_options, :array?, false)
 
         index_string = Integer.to_string(i)
 
@@ -185,13 +189,13 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
         %Phoenix.HTML.Form{
           source: changeset,
           impl: Phoenix.HTML.FormData.Ecto.Changeset,
-          id: if(num_entries > 1, do: id <> "_" <> index_string, else: id),
-          name: if(num_entries > 1, do: name <> "[" <> index_string <> "]", else: name),
-          index: if(num_entries > 1, do: i),
+          id: if(array?, do: id <> "_" <> index_string, else: id),
+          name: if(array?, do: name <> "[" <> index_string <> "]", else: name),
+          index: if(array?, do: i),
           errors: errors,
           data: data,
           params: params,
-          hidden: [{type_field, to_string(type)}],
+          hidden: [{type_field_atom, to_string(type)}],
           options: options
         }
       end)
