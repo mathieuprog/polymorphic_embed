@@ -606,6 +606,23 @@ defmodule PolymorphicEmbed do
   end
 
   defp polymorphic_key_reducer(
+         {field, {rel, %{cardinality: :one}}},
+         acc,
+         changes,
+         msg_func
+       )
+       when rel in [:assoc, :embed] do
+    if changeset = Map.get(changes, field) do
+      case traverse_errors(changeset, msg_func) do
+        errors when errors == %{} -> acc
+        errors -> Map.put(acc, field, errors)
+      end
+    else
+      acc
+    end
+  end
+
+  defp polymorphic_key_reducer(
          {field, {:parameterized, PolymorphicEmbed, _opts}},
          acc,
          changes,
@@ -615,6 +632,29 @@ defmodule PolymorphicEmbed do
       case traverse_errors(changeset, msg_func) do
         errors when errors == %{} -> acc
         errors -> Map.put(acc, field, errors)
+      end
+    else
+      acc
+    end
+  end
+
+  defp polymorphic_key_reducer(
+         {field, {rel, %{cardinality: :many}}},
+         acc,
+         changes,
+         msg_func
+       )
+       when rel in [:assoc, :embed] do
+    if changesets = Map.get(changes, field) do
+      {errors, all_empty?} =
+        Enum.map_reduce(changesets, true, fn changeset, all_empty? ->
+          errors = traverse_errors(changeset, msg_func)
+          {errors, all_empty? and errors == %{}}
+        end)
+
+      case all_empty? do
+        true -> acc
+        false -> Map.put(acc, field, errors)
       end
     else
       acc
