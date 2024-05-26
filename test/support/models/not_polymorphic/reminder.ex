@@ -2,10 +2,13 @@ defmodule PolymorphicEmbed.Regular.Reminder do
   use Ecto.Schema
   use QueryBuilder
   import Ecto.Changeset
+  alias PolymorphicEmbed.Regular.{Todo, Event}
 
   schema "reminders" do
     field(:date, :utc_datetime)
     field(:text, :string)
+    has_one(:todo, Todo)
+    belongs_to(:event, Event)
 
     embeds_one(:channel, PolymorphicEmbed.Regular.Channel.SMS, on_replace: :update)
 
