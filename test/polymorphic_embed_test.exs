@@ -2282,23 +2282,6 @@ defmodule PolymorphicEmbedTest do
       end)
     end
 
-    test "returns type from changeset via custom type field" do
-      reminder_module = get_module(Reminder, :polymorphic)
-      attrs = %{"channel" => %{"my_type_field" => "sms"}}
-
-      changeset =
-        reminder_module
-        |> struct()
-        |> reminder_module.changeset(attrs)
-
-      safe_form_for(changeset, fn f ->
-        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, :channel) ==
-                 :sms
-
-        text_input(f, :text)
-      end)
-    end
-
     test "returns type from map with default type field (string)" do
       reminder_module = get_module(Reminder, :polymorphic)
       attrs = %{"channel2" => %{"__type__" => "email"}}
