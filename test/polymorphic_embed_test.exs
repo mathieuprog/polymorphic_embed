@@ -1771,13 +1771,16 @@ defmodule PolymorphicEmbedTest do
 
       expected_contents =
         if(polymorphic?(generator),
-          do:
-            ~s(<input id="reminder_channel_my_type_field" name="reminder[channel][my_type_field]" type="hidden" value="email"><input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">),
-          else:
-            ~s(<input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">)
+          do: ~s"""
+          <input id="reminder_channel_my_type_field" name="reminder[channel][my_type_field]" type="hidden" value="email">
+          <input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">
+          """,
+          else: ~s"""
+          <input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">
+          """
         )
 
-      assert contents == expected_contents
+      assert contents == String.replace(expected_contents, "\n", "")
 
       contents =
         safe_inputs_for(
@@ -1792,13 +1795,16 @@ defmodule PolymorphicEmbedTest do
 
       expected_contents =
         if(polymorphic?(generator),
-          do:
-            ~s(<input id="reminder_channel_my_type_field" name="reminder[channel][my_type_field]" type="hidden" value="email"><input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">),
-          else:
-            ~s(<input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">)
+          do: ~s"""
+          <input id="reminder_channel_my_type_field" name="reminder[channel][my_type_field]" type="hidden" value="email">
+          <input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">
+          """,
+          else: ~s"""
+          <input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">
+          """
         )
 
-      assert contents == expected_contents
+      assert contents == String.replace(expected_contents, "\n", "")
     end
   end
 
@@ -1821,7 +1827,7 @@ defmodule PolymorphicEmbedTest do
             age: "aquarius",
             address: "some address"
           }
-        ],
+        ]
       }
 
       changeset =
@@ -1837,18 +1843,16 @@ defmodule PolymorphicEmbedTest do
 
       expected_contents =
         if(polymorphic?(generator),
-          do:
-            ~s"""
-            <input id="reminder_contexts_0___type__" name="reminder[contexts][0][__type__]" type="hidden" value="device">
-            <input id="reminder_contexts_0_address" name="reminder[contexts][0][address]" type="text">
-            <input id="reminder_contexts_1___type__" name="reminder[contexts][1][__type__]" type="hidden" value="location">
-            <input id="reminder_contexts_1_address" name="reminder[contexts][1][address]" type="text" value="some address">
-            """,
-          else:
-            ~s"""
-            <input id="reminder_contexts_0_address" name="reminder[contexts][0][address]" type="text" value="some address">
-            <input id="reminder_contexts_1_address" name="reminder[contexts][1][address]" type="text" value="some address">
-            """
+          do: ~s"""
+          <input id="reminder_contexts_0___type__" name="reminder[contexts][0][__type__]" type="hidden" value="device">
+          <input id="reminder_contexts_0_address" name="reminder[contexts][0][address]" type="text">
+          <input id="reminder_contexts_1___type__" name="reminder[contexts][1][__type__]" type="hidden" value="location">
+          <input id="reminder_contexts_1_address" name="reminder[contexts][1][address]" type="text" value="some address">
+          """,
+          else: ~s"""
+          <input id="reminder_contexts_0_address" name="reminder[contexts][0][address]" type="text" value="some address">
+          <input id="reminder_contexts_1_address" name="reminder[contexts][1][address]" type="text" value="some address">
+          """
         )
 
       assert contents == String.replace(expected_contents, "\n", "")
@@ -1866,19 +1870,17 @@ defmodule PolymorphicEmbedTest do
 
       expected_contents =
         if(polymorphic?(generator),
-          do:
-            ~s"""
-            <input id="reminder_contexts_0___type__" name="reminder[contexts][0][__type__]" type="hidden" value="device">
-            <input id="reminder_contexts_0_address" name="reminder[contexts][0][address]" type="text">
-            <input id="reminder_contexts_1___type__" name="reminder[contexts][1][__type__]" type="hidden" value="location">
-            <input id="reminder_contexts_1_address" name="reminder[contexts][1][address]" type="text" value="some address">
-            """,
-          else:
-            ~s"""
-            <input id="reminder_contexts_0_address" name="reminder[contexts][0][address]" type="text" value="some address">
-            <input id="reminder_contexts_1_address" name="reminder[contexts][1][address]" type="text" value="some address">
-            """
-            )
+          do: ~s"""
+          <input id="reminder_contexts_0___type__" name="reminder[contexts][0][__type__]" type="hidden" value="device">
+          <input id="reminder_contexts_0_address" name="reminder[contexts][0][address]" type="text">
+          <input id="reminder_contexts_1___type__" name="reminder[contexts][1][__type__]" type="hidden" value="location">
+          <input id="reminder_contexts_1_address" name="reminder[contexts][1][address]" type="text" value="some address">
+          """,
+          else: ~s"""
+          <input id="reminder_contexts_0_address" name="reminder[contexts][0][address]" type="text" value="some address">
+          <input id="reminder_contexts_1_address" name="reminder[contexts][1][address]" type="text" value="some address">
+          """
+        )
 
       assert contents == String.replace(expected_contents, "\n", "")
     end
@@ -1916,13 +1918,16 @@ defmodule PolymorphicEmbedTest do
 
       expected_contents =
         if(polymorphic?(generator),
-          do:
-            ~s(<input id="reminder_channel_my_type_field" name="reminder[channel][my_type_field]" type="hidden" value="sms"><input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="1">),
-          else:
-            ~s(<input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="1">)
+          do: ~s"""
+          <input id="reminder_channel_my_type_field" name="reminder[channel][my_type_field]" type="hidden" value="sms">
+          <input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="1">
+          """,
+          else: ~s"""
+          <input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="1">
+          """
         )
 
-      assert contents == expected_contents
+      assert contents == String.replace(expected_contents, "\n", "")
 
       contents =
         safe_inputs_for(
@@ -1937,13 +1942,16 @@ defmodule PolymorphicEmbedTest do
 
       expected_contents =
         if(polymorphic?(generator),
-          do:
-            ~s(<input id="reminder_channel_my_type_field" name="reminder[channel][my_type_field]" type="hidden" value="sms"><input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="1">),
-          else:
-            ~s(<input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="1">)
+          do: ~s"""
+          <input id="reminder_channel_my_type_field" name="reminder[channel][my_type_field]" type="hidden" value="sms">
+          <input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="1">
+          """,
+          else: ~s"""
+          <input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="1">
+          """
         )
 
-      assert contents == expected_contents
+      assert contents == String.replace(expected_contents, "\n", "")
     end
   end
 
