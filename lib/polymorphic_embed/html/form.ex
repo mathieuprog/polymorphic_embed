@@ -53,7 +53,7 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
     ## Example
 
         <.form
-          let={f}
+          :let={f}
           for={@changeset}
           id="reminder-form"
           phx-change="validate"

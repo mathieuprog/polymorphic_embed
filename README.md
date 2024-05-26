@@ -219,7 +219,7 @@ You may use `polymorphic_embed_inputs_for/2` when working with LiveView.
 
 ```elixir
 <.form
-  let={f}
+  :let={f}
   for={@changeset}
   id="reminder-form"
   phx-change="validate"
