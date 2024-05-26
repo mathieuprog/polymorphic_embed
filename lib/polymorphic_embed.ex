@@ -110,22 +110,39 @@ defmodule PolymorphicEmbed do
     }
   end
 
-  def cast_polymorphic_embed(changeset, field, cast_options \\ [])
+  def cast_polymorphic_embed(changeset, field, cast_opts \\ [])
 
   # credo:disable-for-next-line
-  def cast_polymorphic_embed(%Ecto.Changeset{} = changeset, field, cast_options) do
-    field_options = get_field_options(changeset.data.__struct__, field)
+  def cast_polymorphic_embed(%Ecto.Changeset{} = changeset, field, cast_opts) do
+    field_opts = get_field_opts(changeset.data.__struct__, field)
 
-    raise_if_invalid_options(field, field_options)
+    raise_if_invalid_options(field, field_opts)
 
-    %{array?: array?, types_metadata: types_metadata} = field_options
+    %{array?: array?, types_metadata: types_metadata} = field_opts
 
-    required = Keyword.get(cast_options, :required, false)
-    with = Keyword.get(cast_options, :with, nil)
+    required = Keyword.get(cast_opts, :required, false)
+    with = Keyword.get(cast_opts, :with, nil)
 
     changeset_fun = &changeset_fun(&1, &2, with, types_metadata)
 
+    # used for sort_param and drop_param support for many embeds
+    sort = param_value_for_cast_opt(:sort_param, cast_opts, changeset.params)
+    drop = param_value_for_cast_opt(:drop_param, cast_opts, changeset.params)
+
     case Map.fetch(changeset.params || %{}, to_string(field)) do
+      # consider sort and drop params even if the assoc param was not given, as in Ecto
+      :error when (array? and is_list(sort)) or is_list(drop) ->
+        create_sort_default = fn -> sort_create(Enum.into(cast_opts, %{}), field_opts) end
+        params_for_field = apply_sort_drop(%{}, sort, drop, create_sort_default)
+
+        cast_polymorphic_embeds_many(
+          changeset,
+          field,
+          changeset_fun,
+          params_for_field,
+          field_opts
+        )
+
       :error when required ->
         if data_for_field = Map.fetch!(changeset.data, field) do
           data_for_field = autogenerate_id(data_for_field, changeset.action)
@@ -151,13 +168,16 @@ defmodule PolymorphicEmbed do
       {:ok, map} when map == %{} and not array? ->
         changeset
 
-      {:ok, params_for_field} when is_list(params_for_field) and array? ->
+      {:ok, params_for_field} when array? ->
+        create_sort_default = fn -> sort_create(Enum.into(cast_opts, %{}), field_opts) end
+        params_for_field = apply_sort_drop(params_for_field, sort, drop, create_sort_default)
+
         cast_polymorphic_embeds_many(
           changeset,
           field,
           changeset_fun,
           params_for_field,
-          field_options
+          field_opts
         )
 
       {:ok, params_for_field} when is_map(params_for_field) and not array? ->
@@ -166,7 +186,7 @@ defmodule PolymorphicEmbed do
           field,
           changeset_fun,
           params_for_field,
-          field_options
+          field_opts
         )
     end
   end
@@ -174,6 +194,77 @@ defmodule PolymorphicEmbed do
   def cast_polymorphic_embed(_, _, _) do
     raise "cast_polymorphic_embed/3 only accepts a changeset as first argument"
   end
+
+  defp sort_create(%{sort_param: _} = cast_opts, field_opts) do
+    default_type = Map.get(cast_opts, :default_type_on_sort_create)
+    type_field_atom = Map.fetch!(field_opts, :type_field_atom)
+    types_metadata = Map.fetch!(field_opts, :types_metadata)
+
+    case default_type do
+      nil ->
+        # If type is not provided, use the first type from types_metadata
+        [first_type_metadata | _] = types_metadata
+        first_type = first_type_metadata.type
+        %{type_field_atom => first_type}
+
+      _ ->
+        # If type is provided, ensure it exists in types_metadata
+        unless Enum.find(types_metadata, &(&1.type === default_type)) do
+          raise "Incorrect type atom #{inspect(default_type)}"
+        end
+
+        %{type_field_atom => default_type}
+    end
+  end
+
+  defp sort_create(_cast_opts, _field_opts), do: nil
+
+  defp apply_sort_drop(value, sort, drop, create_sort_default) when is_map(value) do
+    drop = if is_list(drop), do: drop, else: []
+
+    {sorted, pending} =
+      if is_list(sort) do
+        Enum.map_reduce(sort -- drop, value, &Map.pop(&2, &1, create_sort_default.()))
+      else
+        {[], value}
+      end
+
+    sorted ++
+      (pending
+       |> Map.drop(drop)
+       |> Enum.map(&key_as_int/1)
+       |> Enum.sort()
+       |> Enum.map(&elem(&1, 1)))
+  end
+
+  defp apply_sort_drop(value, _sort, _drop, _default) do
+    value
+  end
+
+  defp param_value_for_cast_opt(opt, opts, params) do
+    if key = opts[opt] do
+      Map.get(params, Atom.to_string(key), nil)
+    end
+  end
+
+  defp key_as_int({key, val}) when is_binary(key) do
+    case Integer.parse(key) do
+      {key, ""} -> {key, val}
+      _ -> {key, val}
+    end
+  end
+
+  # from Ecto
+  # We check for the byte size to avoid creating unnecessary large integers
+  # which would never map to a database key (u64 is 20 digits only).
+  defp key_as_int({key, val}) when is_binary(key) and byte_size(key) < 32 do
+    case Integer.parse(key) do
+      {key, ""} -> {key, val}
+      _ -> {key, val}
+    end
+  end
+
+  defp key_as_int(key_val), do: key_val
 
   defp changeset_fun(struct, params, with, types_metadata) when is_list(with) do
     type = do_get_polymorphic_type(struct, types_metadata)
@@ -194,12 +285,12 @@ defmodule PolymorphicEmbed do
     struct.__struct__.changeset(struct, params)
   end
 
-  defp cast_polymorphic_embeds_one(changeset, field, changeset_fun, params, field_options) do
+  defp cast_polymorphic_embeds_one(changeset, field, changeset_fun, params, field_opts) do
     %{
       types_metadata: types_metadata,
       on_type_not_found: on_type_not_found,
       type_field: type_field
-    } = field_options
+    } = field_opts
 
     data_for_field = Map.fetch!(changeset.data, field)
 
@@ -255,12 +346,12 @@ defmodule PolymorphicEmbed do
     end
   end
 
-  defp cast_polymorphic_embeds_many(changeset, field, changeset_fun, list_params, field_options) do
+  defp cast_polymorphic_embeds_many(changeset, field, changeset_fun, list_params, field_opts) do
     %{
       types_metadata: types_metadata,
       on_type_not_found: on_type_not_found,
       type_field: type_field
-    } = field_options
+    } = field_opts
 
     list_data_for_field = Map.fetch!(changeset.data, field)
 
@@ -386,7 +477,7 @@ defmodule PolymorphicEmbed do
   end
 
   def get_polymorphic_module(schema, field, type_or_data) do
-    %{types_metadata: types_metadata, type_field: type_field} = get_field_options(schema, field)
+    %{types_metadata: types_metadata, type_field: type_field} = get_field_opts(schema, field)
 
     case type_or_data do
       map when is_map(map) ->
@@ -421,7 +512,7 @@ defmodule PolymorphicEmbed do
   end
 
   def get_polymorphic_type(schema, field, module_or_struct) do
-    %{types_metadata: types_metadata} = get_field_options(schema, field)
+    %{types_metadata: types_metadata} = get_field_opts(schema, field)
     do_get_polymorphic_type(module_or_struct, types_metadata)
   end
 
@@ -441,7 +532,7 @@ defmodule PolymorphicEmbed do
       #=> [:location, :age, :device]
   """
   def types(schema, field) do
-    %{types_metadata: types_metadata} = get_field_options(schema, field)
+    %{types_metadata: types_metadata} = get_field_opts(schema, field)
     Enum.map(types_metadata, & &1.type)
   end
 
@@ -455,7 +546,7 @@ defmodule PolymorphicEmbed do
   end
 
   @doc false
-  def get_field_options(schema, field) do
+  def get_field_opts(schema, field) do
     try do
       schema.__schema__(:type, field)
     rescue

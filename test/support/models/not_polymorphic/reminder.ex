@@ -25,7 +25,10 @@ defmodule PolymorphicEmbed.Regular.Reminder do
     |> cast(attrs, [:date, :text])
     |> validate_required(:date)
     |> cast_embed(:channel)
-    |> cast_embed(:contexts)
+    |> cast_embed(:contexts,
+      sort_param: :contexts_sort,
+      drop_param: :contexts_drop
+    )
     |> cast_embed(:contexts3)
   end
 
