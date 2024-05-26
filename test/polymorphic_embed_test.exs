@@ -1802,6 +1802,88 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  test "inputs_for/4 for list of embeds" do
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+
+      attrs = %{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is an Email reminder",
+        contexts: [
+          %{
+            __type__: "device",
+            ref: "12345",
+            type: "cellphone",
+            address: "some address"
+          },
+          %{
+            __type__: "location",
+            age: "aquarius",
+            address: "some address"
+          }
+        ],
+      }
+
+      changeset =
+        struct(reminder_module)
+        |> reminder_module.changeset(attrs)
+
+      contents =
+        safe_inputs_for(changeset, :contexts, generator, fn f ->
+          assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+          assert f.errors == []
+          text_input(f, :address)
+        end)
+
+      expected_contents =
+        if(polymorphic?(generator),
+          do:
+            ~s"""
+            <input id="reminder_contexts_0___type__" name="reminder[contexts][0][__type__]" type="hidden" value="device">
+            <input id="reminder_contexts_0_address" name="reminder[contexts][0][address]" type="text">
+            <input id="reminder_contexts_1___type__" name="reminder[contexts][1][__type__]" type="hidden" value="location">
+            <input id="reminder_contexts_1_address" name="reminder[contexts][1][address]" type="text" value="some address">
+            """,
+          else:
+            ~s"""
+            <input id="reminder_contexts_0_address" name="reminder[contexts][0][address]" type="text" value="some address">
+            <input id="reminder_contexts_1_address" name="reminder[contexts][1][address]" type="text" value="some address">
+            """
+        )
+
+      assert contents == String.replace(expected_contents, "\n", "")
+
+      contents =
+        safe_inputs_for(
+          Map.put(changeset, :action, :insert),
+          :contexts,
+          generator,
+          fn f ->
+            assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+            text_input(f, :address)
+          end
+        )
+
+      expected_contents =
+        if(polymorphic?(generator),
+          do:
+            ~s"""
+            <input id="reminder_contexts_0___type__" name="reminder[contexts][0][__type__]" type="hidden" value="device">
+            <input id="reminder_contexts_0_address" name="reminder[contexts][0][address]" type="text">
+            <input id="reminder_contexts_1___type__" name="reminder[contexts][1][__type__]" type="hidden" value="location">
+            <input id="reminder_contexts_1_address" name="reminder[contexts][1][address]" type="text" value="some address">
+            """,
+          else:
+            ~s"""
+            <input id="reminder_contexts_0_address" name="reminder[contexts][0][address]" type="text" value="some address">
+            <input id="reminder_contexts_1_address" name="reminder[contexts][1][address]" type="text" value="some address">
+            """
+            )
+
+      assert contents == String.replace(expected_contents, "\n", "")
+    end
+  end
+
   test "inputs_for/4 after invalid insert" do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)
@@ -2199,7 +2281,7 @@ defmodule PolymorphicEmbedTest do
         |> reminder_module.changeset(attrs)
 
       safe_form_for(changeset, fn f ->
-        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel) ==
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, :channel) ==
                  :email
 
         text_input(f, :text)
@@ -2222,7 +2304,7 @@ defmodule PolymorphicEmbedTest do
         |> reminder_module.changeset(%{})
 
       safe_form_for(changeset, fn f ->
-        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel) ==
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, :channel) ==
                  :email
 
         text_input(f, :text)
@@ -2239,7 +2321,7 @@ defmodule PolymorphicEmbedTest do
         |> reminder_module.changeset(attrs)
 
       safe_form_for(changeset, fn f ->
-        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel) ==
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, :channel) ==
                  :sms
 
         text_input(f, :text)
@@ -2256,7 +2338,7 @@ defmodule PolymorphicEmbedTest do
         |> reminder_module.changeset(attrs)
 
       safe_form_for(changeset, fn f ->
-        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel2) ==
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, :channel2) ==
                  :email
 
         text_input(f, :text)
@@ -2273,7 +2355,7 @@ defmodule PolymorphicEmbedTest do
         |> reminder_module.changeset(attrs)
 
       safe_form_for(changeset, fn f ->
-        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel2) ==
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, :channel2) ==
                  :email
 
         text_input(f, :text)
@@ -2290,7 +2372,7 @@ defmodule PolymorphicEmbedTest do
         |> reminder_module.changeset(attrs)
 
       safe_form_for(changeset, fn f ->
-        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel3) ==
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, :channel3) ==
                  :email
 
         text_input(f, :text)
@@ -2307,7 +2389,7 @@ defmodule PolymorphicEmbedTest do
         |> reminder_module.changeset(attrs)
 
       safe_form_for(changeset, fn f ->
-        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel3) ==
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, :channel3) ==
                  :email
 
         text_input(f, :text)
@@ -2324,7 +2406,7 @@ defmodule PolymorphicEmbedTest do
         |> reminder_module.changeset(attrs)
 
       safe_form_for(changeset, fn f ->
-        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel) ==
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, :channel) ==
                  nil
 
         text_input(f, :text)
@@ -2340,7 +2422,7 @@ defmodule PolymorphicEmbedTest do
         |> reminder_module.changeset(%{})
 
       safe_form_for(changeset, fn f ->
-        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, reminder_module, :channel) ==
+        assert PolymorphicEmbed.HTML.Form.get_polymorphic_type(f, :channel) ==
                  nil
 
         text_input(f, :text)

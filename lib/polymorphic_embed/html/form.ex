@@ -11,6 +11,11 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
     @doc """
     Returns the polymorphic type of the given field in the given form data.
     """
+    def get_polymorphic_type(%Phoenix.HTML.Form{} = form, field) do
+      %schema{} = form.source.data
+      get_polymorphic_type(form, schema, field)
+    end
+
     def get_polymorphic_type(%Phoenix.HTML.Form{} = form, schema, field) do
       case input_value(form, field) do
         %Ecto.Changeset{data: value} ->
@@ -29,7 +34,7 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
           end
 
         list when is_list(list) ->
-          nil
+          raise "Cannot infer the polymorphic type as the list of embeds may contain multiple types"
 
         nil ->
           nil
@@ -72,9 +77,8 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
     def polymorphic_embed_inputs_for(form, field)
         when is_atom(field) or is_binary(field) do
       options = Keyword.take(form.options, [:multipart])
-      %schema{} = form.source.data
-      type = get_polymorphic_type(form, schema, field)
-      to_form(form.source, form, field, type, options)
+
+      to_form(form.source, form, field, options)
     end
 
     @doc """
@@ -109,9 +113,7 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
     def polymorphic_embed_inputs_for(form, field, fun)
         when is_atom(field) or is_binary(field) do
       options = Keyword.take(form.options, [:multipart])
-      %schema{} = form.source.data
-      type = get_polymorphic_type(form, schema, field)
-      forms = to_form(form.source, form, field, type, options)
+      forms = to_form(form.source, form, field, options)
 
       html_escape(
         Enum.map(forms, fn form ->
@@ -120,10 +122,10 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
       )
     end
 
-    def polymorphic_embed_inputs_for(form, field, type, fun)
+    def polymorphic_embed_inputs_for(form, field, type \\ nil, fun)
         when is_atom(field) or is_binary(field) do
       options = Keyword.take(form.options, [:multipart])
-      forms = to_form(form.source, form, field, type, options)
+      forms = to_form(form.source, form, field, [{:polymorphic_type, type} | options])
 
       html_escape(
         Enum.map(forms, fn form ->
@@ -132,12 +134,26 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
       )
     end
 
-    def to_form(%{action: parent_action} = source_changeset, form, field, type, options) do
+    def to_form(%{action: parent_action} = source_changeset, form, field, options) do
       id = to_string(form.id <> "_#{field}")
       name = to_string(form.name <> "[#{field}]")
 
       params = Map.get(source_changeset.params || %{}, to_string(field), %{}) |> List.wrap()
-      list_data = get_data(source_changeset, field, type) |> List.wrap()
+
+      struct = Ecto.Changeset.apply_changes(source_changeset)
+
+      list_data =
+        case Map.get(struct, field) do
+          nil ->
+            type = Keyword.get(options, :polymorphic_type, get_polymorphic_type(form, field))
+            module = PolymorphicEmbed.get_polymorphic_module(struct.__struct__, field, type)
+            if module, do: [struct(module)], else: []
+
+          data ->
+            List.wrap(data)
+        end
+
+      num_entries = length(list_data)
 
       list_data
       |> Enum.with_index()
@@ -159,15 +175,19 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
             valid?: errors == []
         }
 
-        %schema{} = form.source.data
+        %schema{} = source_changeset.data
         %{type_field_atom: type_field} = PolymorphicEmbed.get_field_options(schema, field)
+
+        index_string = Integer.to_string(i)
+
+        type = PolymorphicEmbed.get_polymorphic_type(schema, field, changeset.data)
 
         %Phoenix.HTML.Form{
           source: changeset,
           impl: Phoenix.HTML.FormData.Ecto.Changeset,
-          id: id,
-          index: if(length(list_data) > 1, do: i),
-          name: name,
+          id: if(num_entries > 1, do: id <> "_" <> index_string, else: id),
+          name: if(num_entries > 1, do: name <> "[" <> index_string <> "]", else: name),
+          index: if(num_entries > 1, do: i),
           errors: errors,
           data: data,
           params: params,
@@ -175,19 +195,6 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
           options: options
         }
       end)
-    end
-
-    defp get_data(changeset, field, type) do
-      struct = Ecto.Changeset.apply_changes(changeset)
-
-      case Map.get(struct, field) do
-        nil ->
-          module = PolymorphicEmbed.get_polymorphic_module(struct.__struct__, field, type)
-          if module, do: struct(module), else: []
-
-        data ->
-          data
-      end
     end
 
     # If the parent changeset had no action, we need to remove the action
