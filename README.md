@@ -252,6 +252,8 @@ You may use `polymorphic_embed_inputs_for/2` when working with LiveView.
 
 Using this function, you have to render the necessary hidden inputs manually as shown above.
 
+There is also `PolymorphicEmbed.HTML.Component.polymorphic_embed_inputs_for/1`, which functions similarly to [`Phoenix.Component.inputs_for/1`](Phoenix.Component.inputs_for).
+
 ### Get the type of a polymorphic embed
 
 Sometimes you need to serialize the polymorphic embed and, once in the front-end, need to distinguish them.
