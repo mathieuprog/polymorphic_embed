@@ -484,7 +484,10 @@ defmodule PolymorphicEmbed do
     dump(Ecto.Changeset.apply_changes(changeset), dumper, params)
   end
 
-  def dump(%module{} = struct, dumper, %{types_metadata: types_metadata, type_field: type_field}) do
+  def dump(%module{} = struct, dumper, %{
+        types_metadata: types_metadata,
+        type_field_atom: type_field_atom
+      }) do
     case module.__schema__(:autogenerate_id) do
       {key, _source, :binary_id} ->
         unless Map.get(struct, key) do
@@ -498,7 +501,8 @@ defmodule PolymorphicEmbed do
     map =
       struct
       |> map_from_struct()
-      |> Map.put(type_field, do_get_polymorphic_type(module, types_metadata))
+      # use the atom instead of string form for mongodb
+      |> Map.put(type_field_atom, do_get_polymorphic_type(module, types_metadata))
 
     dumper.(:map, map)
   end
