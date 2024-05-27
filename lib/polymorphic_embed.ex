@@ -1,6 +1,8 @@
 defmodule PolymorphicEmbed do
   use Ecto.ParameterizedType
 
+  @type t() :: any()
+
   require Logger
 
   alias Ecto.Changeset
