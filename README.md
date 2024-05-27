@@ -173,12 +173,14 @@ polymorphic_embeds_many :contexts,
   By default, a changeset error "is invalid" is added.
 * `:on_replace` – mandatory option that can only be set to `:update` for a single embed and `:delete` for a list of
   embeds (we force a value as the default value of this option for `embeds_one` and `embeds_many` is `:raise`).
+* `:retain_unlisted_types_on_load`: allow the following unconfigured types to be loaded without raising an error. Useful for handling deprecated structs still present in the database.
+* `:nilify_unlisted_types_on_load`: same as `:retain_unlisted_types_on_load`, but nilify the struct on load.
 
 ### Displaying form inputs and errors in Phoenix templates
 
 The library comes with a form helper in order to build form inputs for polymorphic embeds and display changeset errors.
 
-In the entrypoint defining your web interface (`lib/your_app_web.ex` file), add the following import, change `view` to the one your component use, ex. `liew_view`:
+In the entrypoint defining your web interface (`lib/your_app_web.ex` file), add the following import, change `view` to the one your component use:
 
 ```elixir
 def view do
