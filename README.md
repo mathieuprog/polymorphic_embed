@@ -259,15 +259,6 @@ PolymorphicEmbed.get_polymorphic_type(Reminder, :channel, SMS) == :sms
 
 The function `Ecto.changeset.traverse_errors/2` won't include the errors of polymorphic embeds. You may instead use `PolymorphicEmbed.traverse_errors/2` when working with polymorphic embeds.
 
-## Features
-
-* Detect which types to use for the data being `cast`-ed, based on fields present in the data (no need for a *type* field in the data)
-* Run changeset validations when a `changeset/2` function is present (when absent, the library will introspect the fields to cast)
-* Support for nested polymorphic embeds
-* Support for nested `embeds_one`/`embeds_many` embeds
-* Display form inputs for polymorphic embeds in Phoenix templates
-* Tests to ensure code quality
-
 ## Installation
 
 Add `polymorphic_embed` for Elixir as a dependency in your `mix.exs` file:
