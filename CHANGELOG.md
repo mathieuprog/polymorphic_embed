@@ -6,6 +6,7 @@
   * Add `PolymorphicEmbed.HTML.Component.polymorphic_embed_inputs_for/1`
     (similar to `Phoenix.Component.inputs_for/1`)
   * Support updating list of embeds while retaining ids
+  * Add `:retain_unlisted_types_on_load` and `:nilify_unlisted_types_on_load` options
   * Fix form input rendering for list of embeds
   * Fix traverse_errors for nested embeds
 
