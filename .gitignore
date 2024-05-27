@@ -30,3 +30,4 @@ polymorphic_embed-*.tar
 .plts
 
 .elixir_ls
+.vscode
