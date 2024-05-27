@@ -8,7 +8,7 @@
   * Support updating list of embeds while retaining ids
   * Add `:retain_unlisted_types_on_load` and `:nilify_unlisted_types_on_load` options
   * Fix form input rendering for list of embeds
-  * Fix traverse_errors for nested embeds
+  * Fix `traverse_errors` for nested embeds
   * MongoDB fix
 
   **Breaking Change**: The form helper `get_polymorphic_type/3` has been updated to `get_polymorphic_type/2`.
