@@ -104,6 +104,8 @@ defmodule PolymorphicEmbed do
       default: Keyword.get(opts, :default, nil),
       on_replace: Keyword.fetch!(opts, :on_replace),
       on_type_not_found: Keyword.get(opts, :on_type_not_found, :changeset_error),
+      nilify_unlisted_types_on_load: Keyword.get(opts, :nilify_unlisted_types_on_load, []),
+      retain_unlisted_types_on_load: Keyword.get(opts, :retain_unlisted_types_on_load, []),
       type_field: type_field |> to_string(),
       type_field_atom: type_field,
       types_metadata: types_metadata
@@ -441,10 +443,35 @@ defmodule PolymorphicEmbed do
   def load(data, loader, params) when is_binary(data),
     do: do_load(Jason.decode!(data), loader, params)
 
-  def do_load(data, _loader, %{types_metadata: types_metadata, type_field: type_field}) do
+  def do_load(data, _loader, field_opts) do
+    %{
+      types_metadata: types_metadata,
+      type_field: type_field
+    } = field_opts
+
     case do_get_polymorphic_module_from_map(data, type_field, types_metadata) do
-      nil -> raise_cannot_infer_type_from_data(data)
-      module when is_atom(module) -> {:ok, Ecto.embedded_load(module, data, :json)}
+      nil ->
+        retain_type_list = Map.get(field_opts, :retain_unlisted_types_on_load, [])
+        nilify_type_list = Map.get(field_opts, :nilify_unlisted_types_on_load, [])
+
+        retain_type_list = Enum.map(retain_type_list, &to_string(&1))
+        nilify_type_list = Enum.map(nilify_type_list, &to_string(&1))
+
+        type = Map.get(data, type_field)
+
+        cond do
+          type in retain_type_list ->
+            {:ok, data}
+
+          type in nilify_type_list ->
+            {:ok, nil}
+
+          true ->
+            raise_cannot_infer_type_from_data(data)
+        end
+
+      module when is_atom(module) ->
+        {:ok, Ecto.embedded_load(module, data, :json)}
     end
   end
 
