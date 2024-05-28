@@ -66,14 +66,12 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
         |> Keyword.take([:multipart])
         |> Keyword.merge(options)
 
-      type = get_polymorphic_type(parent_form, field_name)
-
       forms =
         to_form(
           parent_form.source,
           parent_form,
           field_name,
-          [{:polymorphic_type, type} | options]
+          options
         )
 
       seen_ids = for f <- forms, vid = f.params[@persistent_id], into: %{}, do: {vid, true}
