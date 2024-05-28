@@ -77,6 +77,8 @@ defmodule PolymorphicEmbed.Reminder do
     |> cast(values, [:date, :text])
     |> validate_required(:date)
     |> cast_polymorphic_embed(:channel)
+    |> cast_polymorphic_embed(:channel2)
+    |> cast_polymorphic_embed(:channel3)
     |> cast_polymorphic_embed(:contexts,
       sort_param: :contexts_sort,
       default_type_on_sort_create: :location,
