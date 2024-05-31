@@ -52,7 +52,7 @@ defmodule PolymorphicEmbed.MixProject do
       {:phoenix_html, "~> 4.1", optional: true},
       {:phoenix_html_helpers, "~> 1.0", optional: true},
       {:phoenix_live_view, "~> 0.19", optional: true},
-      {:ex_doc, "~> 0.33", only: :dev},
+      {:ex_doc, "~> 0.34", only: :dev},
       {:ecto_sql, "~> 3.11", only: :test},
       {:postgrex, "~> 0.18", only: :test},
       {:query_builder, "~> 1.4", only: :test},
