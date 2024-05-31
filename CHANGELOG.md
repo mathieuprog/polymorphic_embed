@@ -1,15 +1,19 @@
 # Changelog
 
+## 4.1.x
+
+  * Add `Form.source_data/1` and `Form.source_module/1` (`get_polymorphic_type/2` doesn't work for list of embeds)
+  * Add `:retain_unlisted_types_on_load` and `:nilify_unlisted_types_on_load` options
+  * MongoDB fix
+
 ## 4.0.x
 
   * Support `sort_param` and `drop_param` for list of embeds
   * Add `PolymorphicEmbed.HTML.Component.polymorphic_embed_inputs_for/1`
     (similar to `Phoenix.Component.inputs_for/1`)
   * Support updating list of embeds while retaining ids
-  * Add `:retain_unlisted_types_on_load` and `:nilify_unlisted_types_on_load` options
   * Fix form input rendering for list of embeds
   * Fix `traverse_errors` for nested embeds
-  * MongoDB fix
 
   **Breaking Change**: The form helper `get_polymorphic_type/3` has been updated to `get_polymorphic_type/2`.
   The module name parameter (previously the second parameter) has been removed.
