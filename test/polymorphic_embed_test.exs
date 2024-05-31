@@ -3124,6 +3124,53 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  test "Form.source_data/1 and Form.source_module/1" do
+    reminder_module = get_module(Reminder, :polymorphic)
+
+    attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an Email reminder",
+      contexts: [
+        %{
+          __type__: "device",
+          ref: "12345",
+          type: "cellphone"
+        },
+        %{
+          __type__: "location",
+          age: "aquarius",
+          address: "some address"
+        }
+      ]
+    }
+
+    changeset =
+      reminder_module
+      |> struct()
+      |> reminder_module.changeset(attrs)
+
+    safe_form_for(changeset, fn _f ->
+      safe_inputs_for(changeset, :contexts, :email, :polymorphic_with_type, fn f ->
+        PolymorphicEmbed.HTML.Form.get_polymorphic_type(f[:contexts])
+
+        case PolymorphicEmbed.HTML.Form.source_data(f) do
+          %PolymorphicEmbed.Reminder.Context.Device{} ->
+            assert PolymorphicEmbed.Reminder.Context.Device == PolymorphicEmbed.HTML.Form.source_module(f)
+
+          %PolymorphicEmbed.Reminder.Context.Location{} ->
+            assert PolymorphicEmbed.Reminder.Context.Location == PolymorphicEmbed.HTML.Form.source_module(f)
+
+          _ ->
+            assert false
+        end
+
+        1
+      end)
+
+      1
+    end)
+  end
+
   describe "Form.get_polymorphic_type/3" do
     test "returns type from changeset via identify_by_fields" do
       reminder_module = get_module(Reminder, :polymorphic)

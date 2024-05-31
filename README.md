@@ -224,7 +224,7 @@ They both render a hidden input for the `"__type__"` field.
 
 ### Displaying form inputs and errors in LiveView
 
-You may use `polymorphic_embed_inputs_for/2` when working with LiveView.
+You may use `PolymorphicEmbed.HTML.Component.polymorphic_embed_inputs_for/1` when working with LiveView, which functions similarly to [`Phoenix.Component.inputs_for/1`](Phoenix.Component.inputs_for).
 
 ```elixir
 <.form
@@ -234,25 +234,17 @@ You may use `polymorphic_embed_inputs_for/2` when working with LiveView.
   phx-change="validate"
   phx-submit="save"
 >
-  <%= for channel_form <- polymorphic_embed_inputs_for f, :channel do %>
-    <%= hidden_inputs_for(channel_form) %>
+  <.polymorphic_embed_inputs_for field={f[:channel]} :let={channel_form}>
+    <%= case source_module(channel_form) do %>
+      <% SMS -> %>
+        <.input field={channel_form[:number]} label="Number" />
 
-    <%= case get_polymorphic_type(f, :channel) do %>
-      <% :sms -> %>
-        <%= label channel_form, :number %>
-        <%= text_input channel_form, :number %>
-
-      <% :email -> %>
-        <%= label channel_form, :email_address %>
-        <%= text_input channel_form, :adress %>
+      <% Email -> %>
+        <.input field={channel_form[:address]} label="Email Address" />
     <% end %>
-  <% end %>
+  </.polymorphic_embed_inputs_for>
 </.form>
 ```
-
-Using this function, you have to render the necessary hidden inputs manually as shown above.
-
-There is also `PolymorphicEmbed.HTML.Component.polymorphic_embed_inputs_for/1`, which functions similarly to [`Phoenix.Component.inputs_for/1`](Phoenix.Component.inputs_for).
 
 ### Get the type of a polymorphic embed
 

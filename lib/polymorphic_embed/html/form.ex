@@ -6,6 +6,12 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
 
     defdelegate get_polymorphic_type(form, field), to: PolymorphicEmbed.HTML.Helpers
 
+    defdelegate get_polymorphic_type(form_field), to: PolymorphicEmbed.HTML.Helpers
+
+    defdelegate source_data(form), to: PolymorphicEmbed.HTML.Helpers
+
+    defdelegate source_module(form), to: PolymorphicEmbed.HTML.Helpers
+
     defdelegate to_form(source_changeset, form, field, options),
       to: PolymorphicEmbed.HTML.Helpers
 

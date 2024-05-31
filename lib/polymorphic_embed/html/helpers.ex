@@ -30,6 +30,25 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
       end
     end
 
+    def get_polymorphic_type(%Phoenix.HTML.FormField{} = form_field) do
+      %{field: field_name, form: parent_form} = form_field
+      get_polymorphic_type(parent_form, field_name)
+    end
+
+    @doc """
+    Returns the source data structure
+    """
+    def source_data(%Phoenix.HTML.Form{} = form) do
+      form.source.data
+    end
+
+    @doc """
+    Returns the source data structure
+    """
+    def source_module(%Phoenix.HTML.Form{} = form) do
+      form.source.data.__struct__
+    end
+
     def to_form(%{action: parent_action} = source_changeset, form, field, options) do
       id = to_string(form.id <> "_#{field}")
       name = to_string(form.name <> "[#{field}]")
