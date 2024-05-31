@@ -3155,10 +3155,12 @@ defmodule PolymorphicEmbedTest do
 
         case PolymorphicEmbed.HTML.Form.source_data(f) do
           %PolymorphicEmbed.Reminder.Context.Device{} ->
-            assert PolymorphicEmbed.Reminder.Context.Device == PolymorphicEmbed.HTML.Form.source_module(f)
+            assert PolymorphicEmbed.Reminder.Context.Device ==
+                     PolymorphicEmbed.HTML.Form.source_module(f)
 
           %PolymorphicEmbed.Reminder.Context.Location{} ->
-            assert PolymorphicEmbed.Reminder.Context.Location == PolymorphicEmbed.HTML.Form.source_module(f)
+            assert PolymorphicEmbed.Reminder.Context.Location ==
+                     PolymorphicEmbed.HTML.Form.source_module(f)
 
           _ ->
             assert false
