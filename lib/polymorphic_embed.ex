@@ -336,7 +336,7 @@ defmodule PolymorphicEmbed do
   end
 
   defp action_and_struct(params, type_field, types_metadata, data_for_field) do
-    case do_get_polymorphic_module_from_map(params, type_field, types_metadata) do
+    case get_polymorphic_module_from_map(params, type_field, types_metadata) do
       nil ->
         if data_for_field do
           {:update, data_for_field}
@@ -367,7 +367,7 @@ defmodule PolymorphicEmbed do
 
     embeds =
       Enum.map(list_params, fn params ->
-        case do_get_polymorphic_module_from_map(params, type_field, types_metadata) do
+        case get_polymorphic_module_from_map(params, type_field, types_metadata) do
           nil when on_type_not_found == :raise ->
             raise_cannot_infer_type_from_data(params)
 
@@ -451,7 +451,7 @@ defmodule PolymorphicEmbed do
       type_field: type_field
     } = field_opts
 
-    case do_get_polymorphic_module_from_map(data, type_field, types_metadata) do
+    case get_polymorphic_module_from_map(data, type_field, types_metadata) do
       nil ->
         retain_type_list = Map.get(field_opts, :retain_unlisted_types_on_load, [])
         nilify_type_list = Map.get(field_opts, :nilify_unlisted_types_on_load, [])
@@ -520,20 +520,20 @@ defmodule PolymorphicEmbed do
 
     case type_or_data do
       map when is_map(map) ->
-        do_get_polymorphic_module_from_map(map, type_field, types_metadata)
+        get_polymorphic_module_from_map(map, type_field, types_metadata)
 
       type when is_atom(type) or is_binary(type) ->
-        do_get_polymorphic_module_for_type(type, types_metadata)
+        get_polymorphic_module_for_type(type, types_metadata)
     end
   end
 
-  defp do_get_polymorphic_module_from_map(%{} = attrs, type_field, types_metadata) do
+  defp get_polymorphic_module_from_map(%{} = attrs, type_field, types_metadata) do
     attrs = attrs |> convert_map_keys_to_string()
 
     type = Enum.find_value(attrs, fn {key, value} -> key == type_field && value end)
 
     if type do
-      do_get_polymorphic_module_for_type(type, types_metadata)
+      get_polymorphic_module_for_type(type, types_metadata)
     else
       # check if one list is contained in another
       # Enum.count(contained -- container) == 0
@@ -545,7 +545,7 @@ defmodule PolymorphicEmbed do
     end
   end
 
-  defp do_get_polymorphic_module_for_type(type, types_metadata) do
+  defp get_polymorphic_module_for_type(type, types_metadata) do
     get_metadata_for_type(type, types_metadata)
     |> (&(&1 && Map.fetch!(&1, :module))).()
   end
