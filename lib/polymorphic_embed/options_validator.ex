@@ -18,14 +18,6 @@ defmodule PolymorphicEmbed.OptionsValidator do
   @valid_on_type_not_found_options [:raise, :changeset_error, :nilify, :ignore]
 
   def validate!(options) do
-    keys = Keyword.keys(options)
-    key_count = keys |> Enum.count()
-    unique_key_count = Enum.uniq(keys) |> Enum.count()
-
-    if key_count != unique_key_count do
-      raise "Duplicate keys found in options for polymorphic embed."
-    end
-
     unless Keyword.fetch!(options, :on_replace) in @valid_on_replace_options do
       raise(
         "`:on_replace` must be set to `:update` for a single polymorphic embed or `:delete` for a list of polymorphic embeds."
@@ -58,6 +50,14 @@ defmodule PolymorphicEmbed.OptionsValidator do
 
     unless is_list(nilify_unlisted_types) and Enum.all?(nilify_unlisted_types, &is_atom/1) do
       raise "`:retain_unlisted_types_on_load` must be a list of types as atoms."
+    end
+
+    keys = Keyword.keys(options)
+    key_count = keys |> Enum.count()
+    unique_key_count = Enum.uniq(keys) |> Enum.count()
+
+    if key_count != unique_key_count do
+      raise "Duplicate keys found in options for polymorphic embed."
     end
 
     unknown_options = Keyword.drop(options, @known_options_names)
