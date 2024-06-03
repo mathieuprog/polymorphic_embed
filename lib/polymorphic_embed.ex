@@ -4,8 +4,10 @@ defmodule PolymorphicEmbed do
   @type t() :: any()
 
   require Logger
+  require PolymorphicEmbed.OptionsValidator
 
   alias Ecto.Changeset
+  alias PolymorphicEmbed.OptionsValidator
 
   defmacro polymorphic_embeds_one(field_name, opts) do
     opts = Keyword.update!(opts, :types, &expand_alias(&1, __CALLER__))
@@ -74,6 +76,16 @@ defmodule PolymorphicEmbed do
 
   @impl true
   def init(opts) do
+    opts = Keyword.put_new(opts, :on_replace, nil)
+    # opts = Keyword.put_new(opts, :type_field_name, :__type__)
+    # TODO remove in v5
+    opts = Keyword.put_new(opts, :type_field_name, Keyword.get(opts, :type_field, :__type__))
+    opts = Keyword.put_new(opts, :on_type_not_found, :changeset_error)
+    opts = Keyword.put_new(opts, :nilify_unlisted_types_on_load, [])
+    opts = Keyword.put_new(opts, :retain_unlisted_types_on_load, [])
+
+    OptionsValidator.validate!(opts)
+
     if Keyword.get(opts, :on_replace) not in [:update, :delete] do
       raise(
         "`:on_replace` option for polymorphic embed must be set to `:update` (single embed) or `:delete` (list of embeds)"
@@ -100,16 +112,13 @@ defmodule PolymorphicEmbed do
           }
       end)
 
-    type_field = Keyword.get(opts, :type_field, :__type__)
-
     %{
       default: Keyword.get(opts, :default, nil),
       on_replace: Keyword.fetch!(opts, :on_replace),
-      on_type_not_found: Keyword.get(opts, :on_type_not_found, :changeset_error),
-      nilify_unlisted_types_on_load: Keyword.get(opts, :nilify_unlisted_types_on_load, []),
-      retain_unlisted_types_on_load: Keyword.get(opts, :retain_unlisted_types_on_load, []),
-      type_field: type_field |> to_string(),
-      type_field_atom: type_field,
+      on_type_not_found: Keyword.fetch!(opts, :on_type_not_found),
+      nilify_unlisted_types_on_load: Keyword.fetch!(opts, :nilify_unlisted_types_on_load),
+      retain_unlisted_types_on_load: Keyword.fetch!(opts, :retain_unlisted_types_on_load),
+      type_field_name: Keyword.fetch!(opts, :type_field_name),
       types_metadata: types_metadata
     }
   end
@@ -201,7 +210,7 @@ defmodule PolymorphicEmbed do
 
   defp sort_create(%{sort_param: _} = cast_opts, field_opts) do
     default_type = Map.get(cast_opts, :default_type_on_sort_create)
-    type_field_atom = Map.fetch!(field_opts, :type_field_atom)
+    type_field_name = Map.fetch!(field_opts, :type_field_name)
     types_metadata = Map.fetch!(field_opts, :types_metadata)
 
     case default_type do
@@ -209,7 +218,7 @@ defmodule PolymorphicEmbed do
         # If type is not provided, use the first type from types_metadata
         [first_type_metadata | _] = types_metadata
         first_type = first_type_metadata.type
-        %{type_field_atom => first_type}
+        %{type_field_name => first_type}
 
       _ ->
         default_type =
@@ -223,7 +232,7 @@ defmodule PolymorphicEmbed do
           raise "Incorrect type atom #{inspect(default_type)}"
         end
 
-        %{type_field_atom => default_type}
+        %{type_field_name => default_type}
     end
   end
 
@@ -299,7 +308,7 @@ defmodule PolymorphicEmbed do
     %{
       types_metadata: types_metadata,
       on_type_not_found: on_type_not_found,
-      type_field: type_field
+      type_field_name: type_field_name
     } = field_opts
 
     data_for_field = Map.fetch!(changeset.data, field)
@@ -307,7 +316,7 @@ defmodule PolymorphicEmbed do
     # We support partial update of the embed. If the type cannot be inferred from the parameters, or if the found type
     # hasn't changed, pass the data to the changeset.
 
-    case action_and_struct(params, type_field, types_metadata, data_for_field) do
+    case action_and_struct(params, type_field_name, types_metadata, data_for_field) do
       :type_not_found when on_type_not_found == :raise ->
         raise_cannot_infer_type_from_data(params)
 
@@ -335,8 +344,8 @@ defmodule PolymorphicEmbed do
     end
   end
 
-  defp action_and_struct(params, type_field, types_metadata, data_for_field) do
-    case get_polymorphic_module_from_map(params, type_field, types_metadata) do
+  defp action_and_struct(params, type_field_name, types_metadata, data_for_field) do
+    case get_polymorphic_module_from_map(params, type_field_name, types_metadata) do
       nil ->
         if data_for_field do
           {:update, data_for_field}
@@ -360,14 +369,14 @@ defmodule PolymorphicEmbed do
     %{
       types_metadata: types_metadata,
       on_type_not_found: on_type_not_found,
-      type_field: type_field
+      type_field_name: type_field_name
     } = field_opts
 
     list_data_for_field = Map.fetch!(changeset.data, field)
 
     embeds =
       Enum.map(list_params, fn params ->
-        case get_polymorphic_module_from_map(params, type_field, types_metadata) do
+        case get_polymorphic_module_from_map(params, type_field_name, types_metadata) do
           nil when on_type_not_found == :raise ->
             raise_cannot_infer_type_from_data(params)
 
@@ -448,18 +457,18 @@ defmodule PolymorphicEmbed do
   def do_load(data, _loader, field_opts) do
     %{
       types_metadata: types_metadata,
-      type_field: type_field
+      type_field_name: type_field_name
     } = field_opts
 
-    case get_polymorphic_module_from_map(data, type_field, types_metadata) do
+    case get_polymorphic_module_from_map(data, type_field_name, types_metadata) do
       nil ->
-        retain_type_list = Map.get(field_opts, :retain_unlisted_types_on_load, [])
-        nilify_type_list = Map.get(field_opts, :nilify_unlisted_types_on_load, [])
+        retain_type_list =
+          Map.fetch!(field_opts, :retain_unlisted_types_on_load) |> Enum.map(&to_string(&1))
 
-        retain_type_list = Enum.map(retain_type_list, &to_string(&1))
-        nilify_type_list = Enum.map(nilify_type_list, &to_string(&1))
+        nilify_type_list =
+          Map.fetch!(field_opts, :nilify_unlisted_types_on_load) |> Enum.map(&to_string(&1))
 
-        type = Map.get(data, type_field)
+        type = Map.get(data, type_field_name |> to_string)
 
         cond do
           type in retain_type_list ->
@@ -488,7 +497,7 @@ defmodule PolymorphicEmbed do
 
   def dump(%module{} = struct, dumper, %{
         types_metadata: types_metadata,
-        type_field_atom: type_field_atom
+        type_field_name: type_field_name
       }) do
     case module.__schema__(:autogenerate_id) do
       {key, _source, :binary_id} ->
@@ -504,7 +513,7 @@ defmodule PolymorphicEmbed do
       struct
       |> map_from_struct()
       # use the atom instead of string form for mongodb
-      |> Map.put(type_field_atom, do_get_polymorphic_type(module, types_metadata))
+      |> Map.put(type_field_name, do_get_polymorphic_type(module, types_metadata))
 
     dumper.(:map, map)
   end
@@ -516,21 +525,24 @@ defmodule PolymorphicEmbed do
   end
 
   def get_polymorphic_module(schema, field, type_or_data) do
-    %{types_metadata: types_metadata, type_field: type_field} = get_field_opts(schema, field)
+    %{types_metadata: types_metadata, type_field_name: type_field_name} =
+      get_field_opts(schema, field)
 
     case type_or_data do
       map when is_map(map) ->
-        get_polymorphic_module_from_map(map, type_field, types_metadata)
+        get_polymorphic_module_from_map(map, type_field_name, types_metadata)
 
       type when is_atom(type) or is_binary(type) ->
         get_polymorphic_module_for_type(type, types_metadata)
     end
   end
 
-  defp get_polymorphic_module_from_map(%{} = attrs, type_field, types_metadata) do
+  defp get_polymorphic_module_from_map(%{} = attrs, type_field_name, types_metadata) do
     attrs = attrs |> convert_map_keys_to_string()
+    type_field_name_as_string = to_string(type_field_name)
 
-    type = Enum.find_value(attrs, fn {key, value} -> key == type_field && value end)
+    type =
+      Enum.find_value(attrs, fn {key, value} -> key == type_field_name_as_string && value end)
 
     if type do
       get_polymorphic_module_for_type(type, types_metadata)

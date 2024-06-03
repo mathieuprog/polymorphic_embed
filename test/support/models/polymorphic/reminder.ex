@@ -20,7 +20,7 @@ defmodule PolymorphicEmbed.Reminder do
         ]
       ],
       on_replace: :update,
-      type_field: :my_type_field,
+      type_field_name: :my_type_field,
       retain_unlisted_types_on_load: [:some_deprecated_type]
     )
 

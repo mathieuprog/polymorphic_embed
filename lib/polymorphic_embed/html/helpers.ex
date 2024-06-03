@@ -91,7 +91,7 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
         %schema{} = source_changeset.data
 
         field_opts = PolymorphicEmbed.get_field_opts(schema, field)
-        type_field_atom = Map.get(field_opts, :type_field_atom, :__type__)
+        type_field_name = Map.fetch!(field_opts, :type_field_name)
         # correctly set id and name for embeds_many inputs
         array? = Map.get(field_opts, :array?, false)
 
@@ -108,7 +108,7 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
           errors: errors,
           data: data,
           params: params,
-          hidden: [{type_field_atom, to_string(type)}],
+          hidden: [{type_field_name, to_string(type)}],
           options: options
         }
       end)
