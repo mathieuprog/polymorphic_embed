@@ -38,7 +38,7 @@ defmodule PolymorphicEmbed.Reminder do
         email: PolymorphicEmbed.Channel.Email
       ],
       on_replace: :update,
-      type_field: :my_type_field
+      type_field_name: :my_type_field
     )
 
     polymorphic_embeds_many(:contexts,
