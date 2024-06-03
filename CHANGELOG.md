@@ -5,6 +5,7 @@
   * Add `Form.source_data/1` and `Form.source_module/1` (`get_polymorphic_type/2` doesn't work for list of embeds)
   * Add `:retain_unlisted_types_on_load` and `:nilify_unlisted_types_on_load` options
   * MongoDB fix
+  * Deprecate `:type_field` in favor of `:type_field_name`
 
 ## 4.0.x
 
