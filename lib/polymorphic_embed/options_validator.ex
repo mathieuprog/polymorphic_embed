@@ -14,7 +14,6 @@ defmodule PolymorphicEmbed.OptionsValidator do
     :schema,
     :default
   ]
-  @valid_on_replace_options [:update, :delete]
   @valid_on_type_not_found_options [:raise, :changeset_error, :nilify, :ignore]
 
   def validate!(options) do
