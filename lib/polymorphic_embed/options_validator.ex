@@ -18,10 +18,16 @@ defmodule PolymorphicEmbed.OptionsValidator do
   @valid_on_type_not_found_options [:raise, :changeset_error, :nilify, :ignore]
 
   def validate!(options) do
-    unless Keyword.fetch!(options, :on_replace) in @valid_on_replace_options do
-      raise(
-        "`:on_replace` must be set to `:update` for a single polymorphic embed or `:delete` for a list of polymorphic embeds."
-      )
+    unless is_nil(options[:default]) or options[:default] == [] do
+      raise "`:default` expected to be `nil` or `[]`."
+    end
+
+    if is_nil(options[:default]) and options[:on_replace] != :update do
+      raise "`:on_replace` must be set to `:update` for a single polymorphic embed."
+    end
+
+    if is_list(options[:default]) and options[:on_replace] != :delete do
+      raise "`:on_replace` must be set to `:delete` for a list of polymorphic embeds."
     end
 
     unless Keyword.fetch!(options, :on_type_not_found) in @valid_on_type_not_found_options do
