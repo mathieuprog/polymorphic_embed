@@ -1,5 +1,5 @@
 %{
-  "attrs": {:hex, :attrs, "0.5.0", "d28e67921ffa0b1a9ff2234a9f4614d3727a1ff884f5dd603bab83498999925e", [:mix], [], "hexpm", "b866979346edc4e161ce1499ebbb800eb48ecb8cd58fa6b92700405b5cb5f28d"},
+  "attrs": {:hex, :attrs, "0.6.0", "25d738b47829f964a786ef73897d2550b66f3e7d1d7c49a83bc8fd81c71bed93", [:mix], [], "hexpm", "9c30ac15255c2ba8399263db55ba32c2f4e5ec267b654ce23df99168b405c82e"},
   "bunt": {:hex, :bunt, "1.0.0", "081c2c665f086849e6d57900292b3a161727ab40431219529f13c4ddcf3e7a44", [:mix], [], "hexpm", "dc5f86aa08a5f6fa6b8096f0735c4e76d54ae5c9fa2c143e5a1fc7c1cd9bb6b5"},
   "castore": {:hex, :castore, "1.0.7", "b651241514e5f6956028147fe6637f7ac13802537e895a724f90bf3e36ddd1dd", [:mix], [], "hexpm", "da7785a4b0d2a021cd1292a60875a784b6caef71e76bf4917bdee1f390455cf5"},
   "credo": {:hex, :credo, "1.7.6", "b8f14011a5443f2839b04def0b252300842ce7388f3af177157c86da18dfbeea", [:mix], [{:bunt, "~> 0.2.1 or ~> 1.0", [hex: :bunt, repo: "hexpm", optional: false]}, {:file_system, "~> 0.2 or ~> 1.0", [hex: :file_system, repo: "hexpm", optional: false]}, {:jason, "~> 1.0", [hex: :jason, repo: "hexpm", optional: false]}], "hexpm", "146f347fb9f8cbc5f7e39e3f22f70acbef51d441baa6d10169dd604bfbc55296"},
