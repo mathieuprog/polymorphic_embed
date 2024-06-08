@@ -108,7 +108,7 @@ defmodule PolymorphicEmbed do
             type: type_name,
             module: Keyword.fetch!(type_opts, :module),
             identify_by_fields:
-              type_opts |> Keyword.get(:identify_by_fields, []) |> Enum.map(&to_string/1)
+              Keyword.get(type_opts, :identify_by_fields, []) |> Enum.map(&to_string/1)
           }
       end)
 
@@ -563,19 +563,26 @@ defmodule PolymorphicEmbed do
   end
 
   defp get_polymorphic_module_from_map(%{} = attrs, type_field_name, types_metadata) do
-    attrs = attrs |> convert_map_keys_to_string()
-    type_field_name_as_string = to_string(type_field_name)
-
-    if type = Map.get(attrs, type_field_name_as_string) do
+    if type = Attrs.get(attrs, type_field_name) do
       get_polymorphic_module_for_type(type, types_metadata)
     else
       # check if one list is contained in another
       # Enum.count(contained -- container) == 0
       # contained -- container == []
-      types_metadata
-      |> Enum.filter(&([] != &1.identify_by_fields))
-      |> Enum.find(&([] == &1.identify_by_fields -- Map.keys(attrs)))
-      |> (&(&1 && Map.fetch!(&1, :module))).()
+
+      types_metadata =
+        types_metadata
+        |> Enum.filter(&([] != &1.identify_by_fields))
+
+      if types_metadata != [] do
+        keys = Map.keys(attrs) |> Enum.map(&to_string/1)
+
+        types_metadata
+        |> Enum.find(&([] == &1.identify_by_fields -- keys))
+        |> (&(&1 && Map.fetch!(&1, :module))).()
+      else
+        nil
+      end
     end
   end
 
@@ -646,9 +653,6 @@ defmodule PolymorphicEmbed do
       raise "`:on_replace` option for field #{inspect(field)} must be set to `:update`"
     end
   end
-
-  defp convert_map_keys_to_string(%{} = map),
-    do: for({key, val} <- map, into: %{}, do: {to_string(key), val})
 
   defp raise_cannot_infer_type_from_data(data),
     do: raise("could not infer polymorphic embed from data #{inspect(data)}")
