@@ -170,6 +170,7 @@ polymorphic_embeds_many :contexts,
 
 * `:types` – discussed above.
 * `:type_field_name` – specify a custom field name for the field holding the type. Defaults to `:__type__`.
+* `:use_parent_field_for_type` – fetch the type from a specified field in the parent schema (the schema holding the embed).
 * `:on_type_not_found` – specify what to do if the embed's type cannot be inferred.
   Possible values are
   - `:raise`: raise an error

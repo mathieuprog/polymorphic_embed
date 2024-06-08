@@ -49,6 +49,7 @@ defmodule PolymorphicEmbed.MixProject do
     [
       {:ecto, "~> 3.11"},
       {:jason, "~> 1.4"},
+      {:attrs, "~> 0.5.0"},
       {:phoenix_html, "~> 4.1", optional: true},
       {:phoenix_html_helpers, "~> 1.0", optional: true},
       {:phoenix_live_view, "~> 0.19", optional: true},

@@ -10,11 +10,13 @@ defmodule PolymorphicEmbed.CreateTables do
     create table(:reminders) do
       add(:date, :utc_datetime, null: false)
       add(:text, :text, null: false)
+      add(:type, :text, null: true)
       add(:event_id, references(:events))
 
       add(:channel, :map)
       add(:channel2, :map)
       add(:channel3, :map)
+      add(:channel4, :map)
       add(:contexts, :map)
       add(:contexts2, :map)
       add(:contexts3, :map)

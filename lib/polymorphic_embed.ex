@@ -113,7 +113,8 @@ defmodule PolymorphicEmbed do
       end)
 
     %{
-      default: Keyword.get(opts, :default, nil),
+      default: Keyword.get(opts, :default),
+      use_parent_field_for_type: Keyword.get(opts, :use_parent_field_for_type),
       on_replace: Keyword.fetch!(opts, :on_replace),
       on_type_not_found: Keyword.fetch!(opts, :on_type_not_found),
       nilify_unlisted_types_on_load: Keyword.fetch!(opts, :nilify_unlisted_types_on_load),
@@ -229,7 +230,7 @@ defmodule PolymorphicEmbed do
 
         # If type is provided, ensure it exists in types_metadata
         unless Enum.find(types_metadata, &(&1.type === default_type)) do
-          raise "Incorrect type atom #{inspect(default_type)}"
+          raise "incorrect type atom #{inspect(default_type)}"
         end
 
         %{type_field_name => default_type}
@@ -305,18 +306,14 @@ defmodule PolymorphicEmbed do
   end
 
   defp cast_polymorphic_embeds_one(changeset, field, changeset_fun, params, field_opts) do
-    %{
-      types_metadata: types_metadata,
-      on_type_not_found: on_type_not_found,
-      type_field_name: type_field_name
-    } = field_opts
+    %{on_type_not_found: on_type_not_found} = field_opts
 
     data_for_field = Map.fetch!(changeset.data, field)
 
     # We support partial update of the embed. If the type cannot be inferred from the parameters, or if the found type
     # hasn't changed, pass the data to the changeset.
 
-    case action_and_struct(params, type_field_name, types_metadata, data_for_field) do
+    case action_and_struct(changeset, params, field_opts, data_for_field) do
       :type_not_found when on_type_not_found == :raise ->
         raise_cannot_infer_type_from_data(params)
 
@@ -344,24 +341,52 @@ defmodule PolymorphicEmbed do
     end
   end
 
-  defp action_and_struct(params, type_field_name, types_metadata, data_for_field) do
-    case get_polymorphic_module_from_map(params, type_field_name, types_metadata) do
-      nil ->
-        if data_for_field do
-          {:update, data_for_field}
-        else
+  defp action_and_struct(changeset, params, field_opts, data_for_field) do
+    %{
+      types_metadata: types_metadata,
+      type_field_name: type_field_name,
+      use_parent_field_for_type: parent_field_for_type
+    } = field_opts
+
+    if parent_field_for_type != nil do
+      type_from_map = Attrs.get(params, type_field_name)
+      type_from_parent_field = Ecto.Changeset.fetch_field!(changeset, parent_field_for_type)
+
+      cond do
+        is_nil(type_from_parent_field) ->
           :type_not_found
-        end
 
-      module when is_nil(data_for_field) ->
-        {:insert, struct(module)}
+        is_nil(type_from_map) ->
+          module = get_polymorphic_module_for_type(type_from_parent_field, types_metadata)
 
-      module ->
-        if data_for_field.__struct__ != module do
+          if is_nil(data_for_field) or data_for_field.__struct__ != module do
+            {:insert, struct(module)}
+          else
+            {:update, data_for_field}
+          end
+
+        to_string(type_from_parent_field) != to_string(type_from_map) ->
+          raise "type specified in the parent field \"#{type_from_parent_field}\" does not match the type in the embedded map \"#{type_from_map}\""
+      end
+    else
+      case get_polymorphic_module_from_map(params, type_field_name, types_metadata) do
+        nil ->
+          if data_for_field do
+            {:update, data_for_field}
+          else
+            :type_not_found
+          end
+
+        module when is_nil(data_for_field) ->
           {:insert, struct(module)}
-        else
-          {:update, data_for_field}
-        end
+
+        module ->
+          if data_for_field.__struct__ != module do
+            {:insert, struct(module)}
+          else
+            {:update, data_for_field}
+          end
+      end
     end
   end
 
@@ -541,10 +566,7 @@ defmodule PolymorphicEmbed do
     attrs = attrs |> convert_map_keys_to_string()
     type_field_name_as_string = to_string(type_field_name)
 
-    type =
-      Enum.find_value(attrs, fn {key, value} -> key == type_field_name_as_string && value end)
-
-    if type do
+    if type = Map.get(attrs, type_field_name_as_string) do
       get_polymorphic_module_for_type(type, types_metadata)
     else
       # check if one list is contained in another

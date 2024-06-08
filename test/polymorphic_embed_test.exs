@@ -120,6 +120,85 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  test "infer type from parent field via :use_parent_field_for_type option" do
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
+
+    sms_reminder_attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an SMS reminder #{generator}",
+      type: "sms",
+      channel4: %{
+        number: "02/807.05.53",
+        country_code: 1,
+        provider: %{
+          __type__: "twilio",
+          api_key: "foo"
+        }
+      }
+    }
+
+    insert_result =
+      struct(reminder_module)
+      |> reminder_module.changeset(sms_reminder_attrs)
+      |> Repo.insert()
+
+    assert {:ok, %{}} = insert_result
+  end
+
+  test "infer type from parent field but type is also present in embed map and it is different" do
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
+
+    sms_reminder_attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an SMS reminder #{generator}",
+      type: "sms",
+      channel4: %{
+        __type__: "email",
+        number: "02/807.05.53",
+        country_code: 1,
+        provider: %{
+          __type__: "twilio",
+          api_key: "foo"
+        }
+      }
+    }
+
+    assert_raise RuntimeError,
+                 ~r"does not match",
+                 fn ->
+                   struct(reminder_module)
+                   |> reminder_module.changeset(sms_reminder_attrs)
+                 end
+  end
+
+  test "infer type from parent field but type is nil" do
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
+
+    sms_reminder_attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an SMS reminder #{generator}",
+      channel4: %{
+        __type__: "sms",
+        number: "02/807.05.53",
+        country_code: 1,
+        provider: %{
+          __type__: "twilio",
+          api_key: "foo"
+        }
+      }
+    }
+
+    insert_result =
+      struct(reminder_module)
+      |> reminder_module.changeset(sms_reminder_attrs)
+      |> Repo.insert()
+
+    assert {:error, %Ecto.Changeset{}} = insert_result
+  end
+
   test "validations before casting polymorphic embed still work" do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)

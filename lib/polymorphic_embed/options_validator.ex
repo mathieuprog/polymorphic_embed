@@ -7,6 +7,7 @@ defmodule PolymorphicEmbed.OptionsValidator do
     :type_field,
     :type_field_name,
     :on_type_not_found,
+    :use_parent_field_for_type,
     :retain_unlisted_types_on_load,
     :nilify_unlisted_types_on_load,
     # Ecto
@@ -35,6 +36,16 @@ defmodule PolymorphicEmbed.OptionsValidator do
       )
     end
 
+    if use_parent_field_for_type = options[:use_parent_field_for_type] do
+      unless is_atom(use_parent_field_for_type) do
+        raise "`:use_parent_field_for_type` must be an atom."
+      end
+
+      if options[:default] == [] do
+        raise "`:use_parent_field_for_type` option cannot be used for a list of polymorphic embeds."
+      end
+    end
+
     # TODO remove in v5
     if Keyword.has_key?(options, :type_field) do
       Logger.warning(
@@ -43,18 +54,18 @@ defmodule PolymorphicEmbed.OptionsValidator do
     end
 
     unless is_atom(Keyword.fetch!(options, :type_field_name)) do
-      raise "`:type_field_name` must be an atom."
+      raise "`:type_field_name` option must be an atom."
     end
 
     retain_unlisted_types = Keyword.fetch!(options, :retain_unlisted_types_on_load)
     nilify_unlisted_types = Keyword.fetch!(options, :nilify_unlisted_types_on_load)
 
     unless is_list(retain_unlisted_types) and Enum.all?(retain_unlisted_types, &is_atom/1) do
-      raise "`:retain_unlisted_types_on_load` must be a list of types as atoms."
+      raise "`:retain_unlisted_types_on_load` option must be a list of types as atoms."
     end
 
     unless is_list(nilify_unlisted_types) and Enum.all?(nilify_unlisted_types, &is_atom/1) do
-      raise "`:retain_unlisted_types_on_load` must be a list of types as atoms."
+      raise "`:retain_unlisted_types_on_load` option must be a list of types as atoms."
     end
 
     keys = Keyword.keys(options)

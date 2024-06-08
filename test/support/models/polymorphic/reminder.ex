@@ -8,6 +8,7 @@ defmodule PolymorphicEmbed.Reminder do
   schema "reminders" do
     field(:date, :utc_datetime)
     field(:text, :string)
+    field(:type, :string)
     has_one(:todo, Todo)
     belongs_to(:event, Event)
 
@@ -39,6 +40,15 @@ defmodule PolymorphicEmbed.Reminder do
       ],
       on_replace: :update,
       type_field_name: :my_type_field
+    )
+
+    polymorphic_embeds_one(:channel4,
+      types: [
+        sms: PolymorphicEmbed.Channel.SMS,
+        email: PolymorphicEmbed.Channel.Email
+      ],
+      on_replace: :update,
+      use_parent_field_for_type: :type
     )
 
     polymorphic_embeds_many(:contexts,
@@ -74,11 +84,12 @@ defmodule PolymorphicEmbed.Reminder do
 
   def changeset(struct, values) do
     struct
-    |> cast(values, [:date, :text])
+    |> cast(values, [:date, :text, :type])
     |> validate_required(:date)
     |> cast_polymorphic_embed(:channel)
     |> cast_polymorphic_embed(:channel2)
     |> cast_polymorphic_embed(:channel3)
+    |> cast_polymorphic_embed(:channel4)
     |> cast_polymorphic_embed(:contexts,
       sort_param: :contexts_sort,
       default_type_on_sort_create: :location,
