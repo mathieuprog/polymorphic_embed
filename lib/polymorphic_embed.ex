@@ -10,7 +10,11 @@ defmodule PolymorphicEmbed do
   alias PolymorphicEmbed.OptionsValidator
 
   defmacro polymorphic_embeds_one(field_name, opts) do
-    opts = Keyword.update!(opts, :types, &expand_alias(&1, __CALLER__))
+    opts =
+      opts
+      |> Keyword.put_new(:array?, false)
+      |> Keyword.put_new(:default,nil)
+      |> Keyword.update!(:types, &expand_alias(&1, __CALLER__))
 
     quote do
       field(unquote(field_name), PolymorphicEmbed, unquote(opts))
@@ -20,6 +24,7 @@ defmodule PolymorphicEmbed do
   defmacro polymorphic_embeds_many(field_name, opts) do
     opts =
       opts
+      |> Keyword.put_new(:array?, true)
       |> Keyword.put_new(:default, [])
       |> Keyword.update!(:types, &expand_alias(&1, __CALLER__))
 
@@ -113,7 +118,8 @@ defmodule PolymorphicEmbed do
       end)
 
     %{
-      default: Keyword.get(opts, :default),
+      array?: Keyword.fetch!(opts, :array?),
+      default: Keyword.fetch!(opts, :default),
       use_parent_field_for_type: Keyword.get(opts, :use_parent_field_for_type),
       on_replace: Keyword.fetch!(opts, :on_replace),
       on_type_not_found: Keyword.fetch!(opts, :on_type_not_found),
@@ -633,9 +639,9 @@ defmodule PolymorphicEmbed do
       _ in UndefinedFunctionError ->
         reraise ArgumentError, "#{inspect(schema)} is not an Ecto schema", __STACKTRACE__
     else
-      {:parameterized, PolymorphicEmbed, options} -> Map.put(options, :array?, false)
-      {:array, {:parameterized, PolymorphicEmbed, options}} -> Map.put(options, :array?, true)
-      {_, {:parameterized, PolymorphicEmbed, options}} -> Map.put(options, :array?, false)
+      {:parameterized, PolymorphicEmbed, options} -> options
+      {:array, {:parameterized, PolymorphicEmbed, options}} -> options
+      {_, {:parameterized, PolymorphicEmbed, options}} -> options
       nil -> raise ArgumentError, "#{field} is not a polymorphic embed"
     end
   end

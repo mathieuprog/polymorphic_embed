@@ -10,6 +10,7 @@ defmodule PolymorphicEmbed.OptionsValidator do
     :use_parent_field_for_type,
     :retain_unlisted_types_on_load,
     :nilify_unlisted_types_on_load,
+    :array?,
     # Ecto
     :field,
     :schema,

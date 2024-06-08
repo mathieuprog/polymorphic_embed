@@ -3414,7 +3414,9 @@ defmodule PolymorphicEmbedTest do
           ]
         ],
         on_replace: :update,
-        type_field_name: :my_type_field
+        type_field_name: :my_type_field,
+        array?: false,
+        default: nil
       ]
 
       PolymorphicEmbed.init(opts)
