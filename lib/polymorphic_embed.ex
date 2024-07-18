@@ -372,7 +372,7 @@ defmodule PolymorphicEmbed do
       type_field_name: type_field_name
     } = field_opts
 
-    list_data_for_field = Map.fetch!(changeset.data, field)
+    list_data_for_field = Map.fetch!(changeset.data, field) || []
 
     embeds =
       Enum.map(list_params, fn params ->
