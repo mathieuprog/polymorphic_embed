@@ -372,7 +372,7 @@ defmodule PolymorphicEmbed do
       type_field_name: type_field_name
     } = field_opts
 
-    list_data_for_field = Map.fetch!(changeset.data, field)
+    list_data_for_field = Map.fetch!(changeset.data, field) || []
 
     embeds =
       Enum.map(list_params, fn params ->
@@ -388,17 +388,13 @@ defmodule PolymorphicEmbed do
 
           module ->
             data_for_field =
-              if list_data_for_field do
-                Enum.find(list_data_for_field, fn
-                  %{id: id} = datum when not is_nil(id) ->
-                    id == params[:id] and datum.__struct__ == module
+              Enum.find(list_data_for_field, fn
+                %{id: id} = datum when not is_nil(id) ->
+                  id == params[:id] and datum.__struct__ == module
 
-                  _ ->
-                    nil
-                end)
-              else
-                nil
-              end
+                _ ->
+                  nil
+              end)
 
             embed_changeset =
               if data_for_field do
