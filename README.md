@@ -169,7 +169,7 @@ polymorphic_embeds_many :contexts,
 #### Options
 
 * `:types` – discussed above.
-* `:type_field` – specify a custom type field. Defaults to `:__type__`.
+* `:type_field_name` – specify a custom type field. Defaults to `:__type__`.
 * `:on_type_not_found` – specify what to do if the embed's type cannot be inferred.
   Possible values are
   - `:raise`: raise an error
