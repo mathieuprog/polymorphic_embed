@@ -604,9 +604,9 @@ defmodule PolymorphicEmbed do
       _ in UndefinedFunctionError ->
         reraise ArgumentError, "#{inspect(schema)} is not an Ecto schema", __STACKTRACE__
     else
-      {:parameterized, PolymorphicEmbed, options} -> Map.put(options, :array?, false)
-      {:array, {:parameterized, PolymorphicEmbed, options}} -> Map.put(options, :array?, true)
-      {_, {:parameterized, PolymorphicEmbed, options}} -> Map.put(options, :array?, false)
+      {:parameterized, {PolymorphicEmbed, options}} -> Map.put(options, :array?, false)
+      {:array, {:parameterized, {PolymorphicEmbed, options}}} -> Map.put(options, :array?, true)
+      {_, {:parameterized, {PolymorphicEmbed, options}}} -> Map.put(options, :array?, false)
       nil -> raise ArgumentError, "#{field} is not a polymorphic embed"
     end
   end
@@ -668,7 +668,7 @@ defmodule PolymorphicEmbed do
   end
 
   defp polymorphic_key_reducer(
-         {field, {:parameterized, PolymorphicEmbed, _opts}},
+         {field, {:parameterized, {PolymorphicEmbed, _opts}}},
          acc,
          changes,
          msg_func
@@ -707,7 +707,7 @@ defmodule PolymorphicEmbed do
   end
 
   defp polymorphic_key_reducer(
-         {field, {:array, {:parameterized, PolymorphicEmbed, _opts}}},
+         {field, {:array, {:parameterized, {PolymorphicEmbed, _opts}}}},
          acc,
          changes,
          msg_func
