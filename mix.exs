@@ -47,14 +47,14 @@ defmodule PolymorphicEmbed.MixProject do
 
   defp deps do
     [
-      {:ecto, "~> 3.11"},
+      {:ecto, "~> 3.12"},
       {:jason, "~> 1.4"},
       {:phoenix_html, "~> 4.1", optional: true},
       {:phoenix_html_helpers, "~> 1.0", optional: true},
       {:phoenix_live_view, "~> 0.19", optional: true},
       {:ex_doc, "~> 0.34", only: :dev},
-      {:ecto_sql, "~> 3.11", only: :test},
-      {:postgrex, "~> 0.18", only: :test},
+      {:ecto_sql, "~> 3.12", only: :test},
+      {:postgrex, "~> 0.18 or ~> 0.19", only: :test},
       {:query_builder, "~> 1.4", only: :test},
       {:phoenix_ecto, "~> 4.6", only: :test},
       {:floki, "~> 0.36", only: :test},
