@@ -1,5 +1,9 @@
 # Changelog
 
+## Next release
+
+  * Fix usage with Ecto 3.12. Require Ecto 3.12 or later
+
 ## 4.1.x
 
   * Add `Form.source_data/1` and `Form.source_module/1` (`get_polymorphic_type/2` doesn't work for list of embeds)
