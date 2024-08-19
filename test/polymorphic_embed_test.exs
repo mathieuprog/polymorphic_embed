@@ -1748,6 +1748,7 @@ defmodule PolymorphicEmbedTest do
             address: "address"
           }
         ],
+        contexts2: nil,
         contexts3: [
           %{
             __type__: "device",
@@ -1850,6 +1851,27 @@ defmodule PolymorphicEmbedTest do
       # Make sure it also works for embeds without ids (`@primary_key false`)
       attrs = %{
         contexts3: [
+          %{
+            __type__: "device",
+            ref: "12345",
+            type: "cellphone"
+          },
+          %{
+            __type__: "device",
+            ref: "56789",
+            type: "laptop"
+          }
+        ]
+      }
+
+      assert {:ok, _} =
+               reminder
+               |> reminder_module.changeset(attrs)
+               |> Repo.update()
+
+      # Make sure it works for embeds with nil entries
+      attrs = %{
+        contexts2: [
           %{
             __type__: "device",
             ref: "12345",

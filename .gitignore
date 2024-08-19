@@ -33,3 +33,4 @@ polymorphic_embed-*.tar
 .vscode
 
 tmp.*
+tmp/

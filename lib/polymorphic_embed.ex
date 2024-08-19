@@ -403,7 +403,7 @@ defmodule PolymorphicEmbed do
       type_field_name: type_field_name
     } = field_opts
 
-    list_data_for_field = Map.fetch!(changeset.data, field)
+    list_data_for_field = Map.fetch!(changeset.data, field) || []
 
     embeds =
       Enum.map(list_params, fn params ->
@@ -639,9 +639,9 @@ defmodule PolymorphicEmbed do
       _ in UndefinedFunctionError ->
         reraise ArgumentError, "#{inspect(schema)} is not an Ecto schema", __STACKTRACE__
     else
-      {:parameterized, PolymorphicEmbed, options} -> options
-      {:array, {:parameterized, PolymorphicEmbed, options}} -> options
-      {_, {:parameterized, PolymorphicEmbed, options}} -> options
+      {:parameterized, {PolymorphicEmbed, options}} -> Map.put(options, :array?, false)
+      {:array, {:parameterized, {PolymorphicEmbed, options}}} -> Map.put(options, :array?, true)
+      {_, {:parameterized, {PolymorphicEmbed, options}}} -> Map.put(options, :array?, false)
       nil -> raise ArgumentError, "#{field} is not a polymorphic embed"
     end
   end
@@ -700,7 +700,7 @@ defmodule PolymorphicEmbed do
   end
 
   defp polymorphic_key_reducer(
-         {field, {:parameterized, PolymorphicEmbed, _opts}},
+         {field, {:parameterized, {PolymorphicEmbed, _opts}}},
          acc,
          changes,
          msg_func
@@ -739,7 +739,7 @@ defmodule PolymorphicEmbed do
   end
 
   defp polymorphic_key_reducer(
-         {field, {:array, {:parameterized, PolymorphicEmbed, _opts}}},
+         {field, {:array, {:parameterized, {PolymorphicEmbed, _opts}}}},
          acc,
          changes,
          msg_func
