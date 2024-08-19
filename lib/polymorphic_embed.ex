@@ -13,7 +13,7 @@ defmodule PolymorphicEmbed do
     opts =
       opts
       |> Keyword.put_new(:array?, false)
-      |> Keyword.put_new(:default,nil)
+      |> Keyword.put_new(:default, nil)
       |> Keyword.update!(:types, &expand_alias(&1, __CALLER__))
 
     quote do
