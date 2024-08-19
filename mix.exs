@@ -1,7 +1,7 @@
 defmodule PolymorphicEmbed.MixProject do
   use Mix.Project
 
-  @version "4.1.1"
+  @version "5.0.0"
 
   def project do
     [

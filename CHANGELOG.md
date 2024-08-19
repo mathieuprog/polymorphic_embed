@@ -1,8 +1,9 @@
 # Changelog
 
-## Next release
+## 5.0.x
 
   * Fix usage with Ecto 3.12. Require Ecto 3.12 or later
+  * Allow inferring type from parent field via new :use_parent_field_for_type option
 
 ## 4.1.x
 
