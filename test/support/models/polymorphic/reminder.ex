@@ -15,6 +15,7 @@ defmodule PolymorphicEmbed.Reminder do
     polymorphic_embeds_one(:channel,
       types: [
         sms: PolymorphicEmbed.Channel.SMS,
+        broadcast: PolymorphicEmbed.Channel.Broadcast,
         email: [
           module: PolymorphicEmbed.Channel.Email,
           identify_by_fields: [:address, :confirmed]
@@ -45,6 +46,7 @@ defmodule PolymorphicEmbed.Reminder do
     polymorphic_embeds_one(:channel4,
       types: [
         sms: PolymorphicEmbed.Channel.SMS,
+        broadcast: PolymorphicEmbed.Channel.Broadcast,
         email: PolymorphicEmbed.Channel.Email
       ],
       on_replace: :update,
