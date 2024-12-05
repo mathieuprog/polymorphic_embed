@@ -2503,6 +2503,43 @@ defmodule PolymorphicEmbedTest do
   end
 
   describe "polymorphic_embed_inputs_for/1" do
+    test "errors in form for polymorphic embed and nested embed" do
+      reminder_module = get_module(Reminder, :polymorphic)
+
+      sms_reminder_attrs = %{
+        text: "This is an SMS reminder",
+        contexts: [
+          %{
+            __type__: "device",
+            extra: %{}
+          }
+        ]
+      }
+
+      changeset =
+        reminder_module
+        |> struct()
+        |> reminder_module.changeset(sms_reminder_attrs)
+
+      changeset = %{changeset | action: :insert}
+
+      html_string =
+        render_component(
+          &liveview_form_with_inputs_for/1,
+          %{changeset: changeset, field: :contexts}
+        )
+
+      assert String.contains?(
+               html_string,
+               "[type: {&quot;can&#39;t be blank&quot;, [validation: :required]}]"
+             )
+
+      assert String.contains?(
+               html_string,
+               "[imei: {&quot;can&#39;t be blank&quot;, [validation: :required]}]"
+             )
+    end
+
     test "generates forms that can be rendered (custom type field/identify_by_fields)" do
       reminder_module = get_module(Reminder, :polymorphic)
 
@@ -3515,6 +3552,24 @@ defmodule PolymorphicEmbedTest do
     >
       <.polymorphic_embed_inputs_for field={f[@field]} :let={sms_form}>
         <%= text_input sms_form, :number %>
+      </.polymorphic_embed_inputs_for>
+    </.form>
+    """
+  end
+
+  defp liveview_form_with_inputs_for(assigns) do
+    ~H"""
+    <.form
+      :let={f}
+      for={@changeset}
+    >
+      <.polymorphic_embed_inputs_for field={f[@field]} :let={sms_form}>
+        <%= text_input sms_form, :number %>
+        <%= sms_form.errors |> inspect() %>
+        <.inputs_for field={sms_form[:extra]} :let={channel_form}>
+          <%= text_input channel_form, :imei %>
+          <%= channel_form.errors |> inspect() %>
+        </.inputs_for>
       </.polymorphic_embed_inputs_for>
     </.form>
     """
