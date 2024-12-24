@@ -1133,6 +1133,37 @@ defmodule PolymorphicEmbedTest do
                  end
   end
 
+  test "cast embed with a schema that has no fields" do
+    broadcast_reminder_attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is a Broadcast reminder polymorphic",
+      channel: %{
+        my_type_field: "broadcast"
+      }
+    }
+
+    changeset =
+      PolymorphicEmbed.Reminder.changeset(%PolymorphicEmbed.Reminder{}, broadcast_reminder_attrs)
+
+    assert changeset.valid?
+    assert changeset.changes.channel == %PolymorphicEmbed.Channel.Broadcast{}
+  end
+
+  test "cast embed with a schema that has not fields and type is in parent" do
+    broadcast_reminder_attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is a Broadcast reminder polymorphic",
+      type: "broadcast",
+      channel4: %{}
+    }
+
+    changeset =
+      PolymorphicEmbed.Reminder.changeset(%PolymorphicEmbed.Reminder{}, broadcast_reminder_attrs)
+
+    assert changeset.valid?
+    assert changeset.changes.channel4 == %PolymorphicEmbed.Channel.Broadcast{}
+  end
+
   test "cast embed after change/2 call should succeed" do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)
@@ -3452,7 +3483,7 @@ defmodule PolymorphicEmbedTest do
   describe "types/2" do
     test "returns the types for a polymoprhic embed field" do
       assert PolymorphicEmbed.types(PolymorphicEmbed.Reminder, :channel) ==
-               [:sms, :email]
+               [:sms, :broadcast, :email]
     end
   end
 
