@@ -83,7 +83,7 @@ defmodule PolymorphicEmbed do
   def init(opts) do
     opts = Keyword.put_new(opts, :on_replace, nil)
     # opts = Keyword.put_new(opts, :type_field_name, :__type__)
-    # TODO remove in v5
+    # TODO remove in v6
     opts = Keyword.put_new(opts, :type_field_name, Keyword.get(opts, :type_field, :__type__))
     opts = Keyword.put_new(opts, :on_type_not_found, :changeset_error)
     opts = Keyword.put_new(opts, :nilify_unlisted_types_on_load, [])

@@ -47,7 +47,7 @@ defmodule PolymorphicEmbed.OptionsValidator do
       end
     end
 
-    # TODO remove in v5
+    # TODO remove in v6
     if Keyword.has_key?(options, :type_field) do
       Logger.warning(
         "`:type_field` option is deprecated and must be replaced with `:type_field_name`."
