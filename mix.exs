@@ -69,8 +69,12 @@ defmodule PolymorphicEmbed.MixProject do
     [
       test: [
         "ecto.create --quiet",
-        "ecto.rollback --all",
-        "ecto.migrate",
+        "ecto.rollback --all --quiet",
+        fn _args ->
+          :code.delete(PolymorphicEmbed.CreateTables)
+          :code.purge(PolymorphicEmbed.CreateTables)
+        end,
+        "ecto.migrate --quiet",
         "test"
       ]
     ]
