@@ -3,7 +3,6 @@ defmodule PolymorphicEmbed do
 
   @type t() :: any()
 
-  require Logger
   require PolymorphicEmbed.OptionsValidator
 
   alias Ecto.Changeset
@@ -52,19 +51,7 @@ defmodule PolymorphicEmbed do
   # # ...
   #   polymorphic_embeds_one(:fallback_provider, types: @types)
   # which means we can't expand aliases
-  defp expand_alias(types, env) do
-    Logger.warning("""
-    Aliases could not be expanded for the given types in #{inspect(env.module)}.
-
-    This likely means the types are defined using a module attribute or another reference
-    that cannot be expanded at compile time. As a result, this may lead to unnecessary
-    compile-time dependencies, causing longer compilation times and unnecessary
-    re-compilation of modules (the parent defining the embedded types).
-
-    Ensure that the types are specified directly within the macro call to avoid these issues,
-    or refactor your code to eliminate references that cannot be expanded.
-    """)
-
+  defp expand_alias(types, _env) do
     types
   end
 
