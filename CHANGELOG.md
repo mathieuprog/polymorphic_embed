@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.0.2
+
+  * Remove warning when aliases cannot be expanded (#123).
+
+## 5.0.1
+
+  * Relax `phoenix_live_view` constraint to allow 1.0.
+
 ## 5.0.x
 
   * Fix usage with Ecto 3.12. Require Ecto 3.12 or later
