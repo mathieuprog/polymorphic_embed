@@ -6,7 +6,7 @@ defmodule PolymorphicEmbed.MixProject do
   def project do
     [
       app: :polymorphic_embed,
-      elixir: "~> 1.9",
+      elixir: "~> 1.13",
       deps: deps(),
       aliases: aliases(),
       elixirc_paths: elixirc_paths(Mix.env()),
