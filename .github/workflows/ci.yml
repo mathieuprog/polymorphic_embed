@@ -25,6 +25,7 @@ jobs:
           - { elixir: 1.16, otp: 24 }
           - { elixir: 1.16, otp: 25 }
           - { elixir: 1.16, otp: 26 }
+          - { elixir: "1.18", otp: "27" }
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
