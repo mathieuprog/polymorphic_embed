@@ -2598,6 +2598,35 @@ defmodule PolymorphicEmbedTest do
       assert [input] = Floki.find(html, "#reminder_channel2_0_number")
       assert Floki.attribute(input, "type") == ["text"]
     end
+
+    test "uses default value if value is nil" do
+      reminder_module = get_module(Reminder, :polymorphic)
+
+      attrs = %{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is an Email reminder",
+        channel2: nil
+      }
+
+      changeset =
+        reminder_module
+        |> struct()
+        |> reminder_module.changeset(attrs)
+
+      html =
+        render_component(
+          &liveview_form_component/1,
+          %{changeset: changeset, field: :channel2}
+        )
+        |> Floki.parse_fragment!()
+
+      assert [input] = Floki.find(html, ~s([name="reminder[channel2][__type__]"]))
+      assert Floki.attribute(input, "type") == ["hidden"]
+      assert Floki.attribute(input, "value") == ["sms"]
+
+      assert [input] = Floki.find(html, "#reminder_channel2_0_number")
+      assert Floki.attribute(input, "type") == ["text"]
+    end
   end
 
   describe "polymorphic_embed_inputs_for/2" do
@@ -3513,7 +3542,7 @@ defmodule PolymorphicEmbedTest do
       :let={f}
       for={@changeset}
     >
-      <.polymorphic_embed_inputs_for field={f[@field]} :let={sms_form}>
+      <.polymorphic_embed_inputs_for field={f[@field]} :let={sms_form} default={%PolymorphicEmbed.Channel.SMS{}}>
         <%= text_input sms_form, :number %>
       </.polymorphic_embed_inputs_for>
     </.form>
