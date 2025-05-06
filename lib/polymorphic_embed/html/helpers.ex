@@ -65,7 +65,7 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
 
             cond do
               module -> [struct(module)]
-              options[:default] -> [options[:default]]
+              default = options[:default] -> [default]
               true -> []
             end
 
