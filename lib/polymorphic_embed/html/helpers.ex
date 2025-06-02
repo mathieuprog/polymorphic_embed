@@ -71,7 +71,14 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
       list_data
       |> Enum.with_index()
       |> Enum.map(fn {data, i} ->
-        params = Enum.at(params, i) || %{}
+        params =
+          case is_list(params) do
+            true ->
+              Enum.at(params, i, %{})
+
+            false ->
+              Map.get(params, to_string(i), %{})
+          end
 
         changeset =
           data

@@ -3050,6 +3050,117 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  @tag :skip
+  test "errors in form for polymorphic embed and nested embed 2" do
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+
+      sms_reminder_attrs = %{
+        text: "This is an SMS reminder",
+        channel: %{
+          my_type_field: "sms",
+          result: %{
+            success: ""
+          }
+        },
+        contexts3: [
+          %{
+            __type__: "location",
+            address: "",
+            country: %{
+              name: "A"
+            }
+          },
+          %{
+            __type__: "device",
+            type: ""
+          },
+          %{
+            __type__: "age",
+            age: ""
+          }
+        ]
+      }
+
+      changeset =
+        reminder_module
+        |> struct()
+        |> reminder_module.changeset(sms_reminder_attrs)
+
+      changeset = %{changeset | action: :insert}
+
+      IO.inspect(changeset, label: "changeset", limit: :infinity)
+
+      safe_form_for(changeset, fn f ->
+        assert f.errors == [date: {"can't be blank", [validation: :required]}]
+
+        contents =
+          safe_inputs_for(changeset, :channel, generator, fn f ->
+            assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+
+            assert f.errors == [
+                     number: {"can't be blank", [validation: :required]},
+                     country_code: {"can't be blank", [validation: :required]},
+                     provider: {"can't be blank", [validation: :required]}
+                   ]
+
+            contents =
+              safe_inputs_for(f.source, :result, :not_polymorphic, fn f ->
+                assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+
+                assert f.errors == [success: {"can't be blank", [validation: :required]}]
+
+                "from safe_inputs_for #{generator}"
+              end)
+
+            assert contents =~ "from safe_inputs_for #{generator}"
+
+            "from safe_inputs_for #{generator}"
+          end)
+
+        assert contents =~ "from safe_inputs_for #{generator}"
+
+        contents =
+          safe_inputs_for(changeset, :contexts, generator, fn %{index: index} = f ->
+            assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+
+            if index == 0 do
+              assert f.errors == []
+            else
+              assert f.errors == [address: {"can't be blank", [validation: :required]}]
+            end
+
+            contents =
+              safe_inputs_for(f.source, :country, :not_polymorphic, fn f ->
+                assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+
+                if index == 0 do
+                  assert f.errors == [
+                           name:
+                             {"should be at least %{count} character(s)",
+                              [count: 3, validation: :length, kind: :min, type: :string]}
+                         ]
+                else
+                  assert f.errors == [
+                           name: {"can't be blank", [validation: :required]}
+                         ]
+                end
+
+                "from safe_inputs_for #{generator}"
+              end)
+
+            assert contents =~ "from safe_inputs_for #{generator}"
+
+            "from safe_inputs_for #{generator}"
+          end)
+
+        assert contents =~ "from safe_inputs_for #{generator}"
+
+        1
+      end)
+    end
+  end
+
   test "keep changes in embeds_one (nested into a polymorphic embed) when invalid changeset" do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)
