@@ -9,6 +9,8 @@ defmodule PolymorphicEmbed do
   alias Ecto.Changeset
   alias PolymorphicEmbed.OptionsValidator
 
+  alias PolymorphicEmbed.HTML.Component
+
   defmacro polymorphic_embeds_one(field_name, opts) do
     opts =
       opts
@@ -419,13 +421,19 @@ defmodule PolymorphicEmbed do
 
           module ->
             data_for_field =
-              Enum.find(list_data_for_field, fn
-                %{id: id} = datum when not is_nil(id) ->
-                  id == params[:id] and datum.__struct__ == module
+              case params[Component.persistent_id_key()] do
+                persistent_id when is_binary(persistent_id) ->
+                  Enum.at(list_data_for_field, String.to_integer(persistent_id))
 
                 _ ->
-                  nil
-              end)
+                  Enum.find(list_data_for_field, fn
+                    %{id: id} = datum when not is_nil(id) ->
+                      id == params[:id] and datum.__struct__ == module
+
+                    _ ->
+                      nil
+                  end)
+              end
 
             embed_changeset =
               if data_for_field do

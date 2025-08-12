@@ -115,6 +115,10 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
       """
     end
 
+    def persistent_id_key() do
+      @persistent_id
+    end
+
     defp next_id(idx, %{} = seen_ids) do
       id_str = to_string(idx)
 

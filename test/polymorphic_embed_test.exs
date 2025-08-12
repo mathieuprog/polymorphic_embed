@@ -1892,6 +1892,137 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  test "component renders hidden _persistent_id for each nested form in embeds_many" do
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
+
+    changeset =
+      struct(reminder_module)
+      |> reminder_module.changeset(%{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "pid render",
+        contexts: [
+          %{__type__: "device", ref: "A", type: "cellphone"},
+          %{__type__: "location", age: "aqua", address: "addr1"}
+        ]
+      })
+
+    html =
+      render_component(
+        fn assigns ->
+          ~H"""
+          <.form :let={f} for={@changeset}>
+            <.polymorphic_embed_inputs_for field={f[:contexts]} :let={ctx_form}>
+              <input type="hidden" name={Phoenix.HTML.Form.input_name(ctx_form, :_persistent_id)} value={ctx_form.params["_persistent_id"]} />
+            </.polymorphic_embed_inputs_for>
+          </.form>
+          """
+        end,
+        %{changeset: changeset}
+      )
+      |> Floki.parse_fragment!()
+
+    assert [i0, _dup0] =
+             Floki.find(
+               html,
+               "input[name='reminder[contexts][0][_persistent_id]'][type='hidden'][value='0']"
+             )
+
+    assert Floki.attribute(i0, "id") == ["reminder_contexts_0__persistent_id"]
+
+    assert [i1, _dup1] =
+             Floki.find(
+               html,
+               "input[name='reminder[contexts][1][_persistent_id]'][type='hidden'][value='1']"
+             )
+
+    assert Floki.attribute(i1, "id") == ["reminder_contexts_1__persistent_id"]
+  end
+
+  test "embeds_many respects _persistent_id to map to original items by index on reorder" do
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
+
+    reminder =
+      struct(reminder_module)
+      |> reminder_module.changeset(%{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "ctx reorder #{generator}",
+        contexts: [
+          %{
+            __type__: "device",
+            ref: "r0",
+            type: "cellphone",
+            address: "addr0"
+          },
+          %{
+            __type__: "location",
+            age: "aqua",
+            address: "addr1"
+          }
+        ]
+      })
+      |> Repo.insert!()
+
+    id0 = Enum.at(reminder.contexts, 0).id
+    id1 = Enum.at(reminder.contexts, 1).id
+
+    attrs = %{
+      contexts: [
+        %{"__type__" => "location", "_persistent_id" => "1", "address" => "addr1u"},
+        %{
+          "__type__" => "device",
+          "_persistent_id" => "0",
+          "ref" => "r0u",
+          "type" => "cellphone",
+          "address" => "addr0u"
+        }
+      ]
+    }
+
+    updated =
+      reminder
+      |> reminder_module.changeset(attrs)
+      |> Repo.update!()
+
+    assert Enum.at(updated.contexts, 0).id == id1
+    assert Enum.at(updated.contexts, 1).id == id0
+    assert Enum.at(updated.contexts, 0).address == "addr1u"
+    assert Enum.at(updated.contexts, 1).ref == "r0u"
+  end
+
+  test "embeds_many without ids uses _persistent_id to update the correct item" do
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
+
+    reminder =
+      struct(reminder_module)
+      |> reminder_module.changeset(%{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "no ids #{generator}",
+        contexts3: [
+          %{__type__: "device", ref: "A", type: "cellphone"},
+          %{__type__: "device", ref: "B", type: "laptop"}
+        ]
+      })
+      |> Repo.insert!()
+
+    attrs = %{
+      contexts3: [
+        %{"__type__" => "device", "_persistent_id" => "1", "ref" => "B2", "type" => "laptop"},
+        %{"__type__" => "device", "_persistent_id" => "0", "ref" => "A", "type" => "cellphone"}
+      ]
+    }
+
+    updated =
+      reminder
+      |> reminder_module.changeset(attrs)
+      |> Repo.update!()
+
+    assert Enum.at(updated.contexts3, 0).ref == "B2"
+    assert Enum.at(updated.contexts3, 1).ref == "A"
+  end
+
   test "generate ID for single embed in data" do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)
