@@ -49,11 +49,11 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
       form.source.data.__struct__
     end
 
-    def to_form(%{action: parent_action} = source_changeset, form, field, options) do
+    def to_form(source_changeset, %{action: parent_action} = form, field, options) do
       id = to_string(form.id <> "_#{field}")
       name = to_string(form.name <> "[#{field}]")
 
-      params = Map.get(source_changeset.params || %{}, to_string(field), %{}) |> List.wrap()
+      params = Map.get(source_changeset.params || %{}, to_string(field), %{})
 
       struct = Ecto.Changeset.apply_changes(source_changeset)
 
@@ -71,7 +71,17 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
       list_data
       |> Enum.with_index()
       |> Enum.map(fn {data, i} ->
-        params = Enum.at(params, i) || %{}
+        params =
+          case params do
+            nil ->
+              %{}
+
+            params when is_list(params) ->
+              Enum.at(params, i) || %{}
+
+            params when is_map(params) ->
+              Map.get(params, to_string(i), %{})
+          end
 
         changeset =
           data
