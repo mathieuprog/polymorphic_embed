@@ -3204,6 +3204,97 @@ defmodule PolymorphicEmbedTest do
     end)
   end
 
+  test "form with improved param handling for different param types" do
+    reminder_module = get_module(Reminder, :polymorphic)
+
+    # Test with nil params - when contexts is empty, safe_inputs_for returns empty string
+    changeset_nil_params =
+      struct(reminder_module)
+      |> reminder_module.changeset(%{text: "Test reminder", contexts: []})
+      |> Map.put(:params, %{"contexts" => nil})
+      |> Map.put(:action, :insert)
+
+    safe_form_for(changeset_nil_params, fn _f ->
+      safe_inputs_for(changeset_nil_params, :contexts, :polymorphic, fn f ->
+        assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+        assert f.errors == []
+        assert f.params == %{}
+
+        1
+      end)
+
+      1
+    end)
+
+    # Test with list params - need to add some contexts to the data
+    changeset_list_params =
+      struct(reminder_module)
+      |> reminder_module.changeset(%{
+        text: "Test reminder",
+        contexts: [
+          %{__type__: "device", ref: "123", type: "cellphone"},
+          %{__type__: "location", address: "456 Main St"}
+        ]
+      })
+      |> Map.put(:params, %{"contexts" => [%{"ref" => "123"}, %{"address" => "456 Main St"}]})
+      |> Map.put(:action, :insert)
+
+    safe_form_for(changeset_list_params, fn _f ->
+      safe_inputs_for(changeset_list_params, :contexts, :polymorphic, fn f ->
+        assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+        assert f.errors == []
+        # First context should have params from index 0
+        if f.index == 0 do
+          assert f.params == %{"ref" => "123"}
+        end
+
+        # Second context should have params from index 1
+        if f.index == 1 do
+          assert f.params == %{"address" => "456 Main St"}
+        end
+
+        1
+      end)
+
+      1
+    end)
+
+    # Test with map params - need to add some contexts to the data
+    changeset_map_params =
+      struct(reminder_module)
+      |> reminder_module.changeset(%{
+        text: "Test reminder",
+        contexts: [
+          %{__type__: "device", ref: "789", type: "cellphone"},
+          %{__type__: "location", address: "012 Oak Ave"}
+        ]
+      })
+      |> Map.put(:params, %{
+        "contexts" => %{"0" => %{"ref" => "789"}, "1" => %{"address" => "012 Oak Ave"}}
+      })
+      |> Map.put(:action, :insert)
+
+    safe_form_for(changeset_map_params, fn _f ->
+      safe_inputs_for(changeset_map_params, :contexts, :polymorphic, fn f ->
+        assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+        assert f.errors == []
+        # First context should have params from key "0"
+        if f.index == 0 do
+          assert f.params == %{"ref" => "789"}
+        end
+
+        # Second context should have params from key "1"
+        if f.index == 1 do
+          assert f.params == %{"address" => "012 Oak Ave"}
+        end
+
+        1
+      end)
+
+      1
+    end)
+  end
+
   describe "get_polymorphic_type/3" do
     test "returns the type for a module" do
       assert PolymorphicEmbed.get_polymorphic_type(
