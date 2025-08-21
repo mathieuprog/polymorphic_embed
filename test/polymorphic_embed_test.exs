@@ -2704,15 +2704,26 @@ defmodule PolymorphicEmbedTest do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)
 
-      attrs = %{
-        date: ~U[2020-05-28 02:57:19Z],
-        text: "This is an Email reminder",
-        channel: %{
-          address: "a",
-          valid: true,
-          confirmed: true
-        }
-      }
+      attrs =
+        if polymorphic?(generator) do
+          %{
+            date: ~U[2020-05-28 02:57:19Z],
+            text: "This is an Email reminder",
+            channel: %{
+              address: "a",
+              valid: true,
+              confirmed: true
+            }
+          }
+        else
+          %{
+            number: ~U[2020-05-28 02:57:19Z],
+            text: "This is a non polymorphic reminder",
+            channel: %{
+              number: "a"
+            }
+          }
+        end
 
       changeset =
         struct(reminder_module)
@@ -2721,8 +2732,19 @@ defmodule PolymorphicEmbedTest do
       contents =
         safe_inputs_for(changeset, :channel, generator, fn f ->
           assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
-          assert f.errors == []
-          text_input(f, :address)
+
+          if polymorphic?(generator) do
+            assert f.errors == [
+                     {:address,
+                      {"should be at least %{count} character(s)",
+                       [count: 3, validation: :length, kind: :min, type: :string]}}
+                   ]
+
+            text_input(f, :address)
+          else
+            assert f.errors == []
+            text_input(f, :number)
+          end
         end)
 
       expected_contents =
@@ -2732,7 +2754,7 @@ defmodule PolymorphicEmbedTest do
           <input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">
           """,
           else: ~s"""
-          <input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">
+          <input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="a">
           """
         )
 
@@ -2745,7 +2767,12 @@ defmodule PolymorphicEmbedTest do
           generator,
           fn f ->
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
-            text_input(f, :address)
+
+            if polymorphic?(generator) do
+              text_input(f, :address)
+            else
+              text_input(f, :number)
+            end
           end
         )
 
@@ -2756,7 +2783,7 @@ defmodule PolymorphicEmbedTest do
           <input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">
           """,
           else: ~s"""
-          <input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">
+          <input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="a">
           """
         )
 
