@@ -121,7 +121,7 @@ defmodule PolymorphicEmbed do
 
   # credo:disable-for-next-line
   def cast_polymorphic_embed(%Ecto.Changeset{} = changeset, field, cast_opts) do
-    field_opts = get_field_opts(changeset.data.__struct__, field)
+    field_opts = get_field_opts(changeset, field)
 
     raise_if_invalid_options(field, field_opts)
 
@@ -619,12 +619,14 @@ defmodule PolymorphicEmbed do
   end
 
   @doc false
-  def get_field_opts(schema, field) do
+  def get_field_opts(schema_or_changeset, field) do
     try do
-      schema.__schema__(:type, field)
+      get_type_definition_for_field(schema_or_changeset, field)
     rescue
       _ in UndefinedFunctionError ->
-        reraise ArgumentError, "#{inspect(schema)} is not an Ecto schema", __STACKTRACE__
+        reraise ArgumentError,
+                "#{inspect(schema_or_changeset)} is not an Ecto schema or Ecto changeset",
+                __STACKTRACE__
     else
       {:parameterized, {PolymorphicEmbed, options}} -> Map.put(options, :array?, false)
       {:array, {:parameterized, {PolymorphicEmbed, options}}} -> Map.put(options, :array?, true)
@@ -632,6 +634,11 @@ defmodule PolymorphicEmbed do
       nil -> raise ArgumentError, "#{field} is not a polymorphic embed"
     end
   end
+
+  defp get_type_definition_for_field(%Changeset{} = changeset, field),
+    do: changeset.types[field]
+
+  defp get_type_definition_for_field(schema, field), do: schema.__schema__(:type, field)
 
   defp raise_if_invalid_options(field, %{array?: array?, default: default, on_replace: on_replace}) do
     if array? and default != [] do
