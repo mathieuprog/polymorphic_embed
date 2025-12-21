@@ -2733,15 +2733,26 @@ defmodule PolymorphicEmbedTest do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)
 
-      attrs = %{
-        date: ~U[2020-05-28 02:57:19Z],
-        text: "This is an Email reminder",
-        channel: %{
-          address: "a",
-          valid: true,
-          confirmed: true
-        }
-      }
+      attrs =
+        if polymorphic?(generator) do
+          %{
+            date: ~U[2020-05-28 02:57:19Z],
+            text: "This is an Email reminder",
+            channel: %{
+              address: "a",
+              valid: true,
+              confirmed: true
+            }
+          }
+        else
+          %{
+            number: ~U[2020-05-28 02:57:19Z],
+            text: "This is a non polymorphic reminder",
+            channel: %{
+              number: "a"
+            }
+          }
+        end
 
       changeset =
         struct(reminder_module)
@@ -2750,8 +2761,19 @@ defmodule PolymorphicEmbedTest do
       contents =
         safe_inputs_for(changeset, :channel, generator, fn f ->
           assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
-          assert f.errors == []
-          text_input(f, :address)
+
+          if polymorphic?(generator) do
+            assert f.errors == [
+                     {:address,
+                      {"should be at least %{count} character(s)",
+                       [count: 3, validation: :length, kind: :min, type: :string]}}
+                   ]
+
+            text_input(f, :address)
+          else
+            assert f.errors == []
+            text_input(f, :number)
+          end
         end)
 
       expected_contents =
@@ -2761,7 +2783,7 @@ defmodule PolymorphicEmbedTest do
           <input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">
           """,
           else: ~s"""
-          <input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">
+          <input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="a">
           """
         )
 
@@ -2774,7 +2796,12 @@ defmodule PolymorphicEmbedTest do
           generator,
           fn f ->
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
-            text_input(f, :address)
+
+            if polymorphic?(generator) do
+              text_input(f, :address)
+            else
+              text_input(f, :number)
+            end
           end
         )
 
@@ -2785,7 +2812,7 @@ defmodule PolymorphicEmbedTest do
           <input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">
           """,
           else: ~s"""
-          <input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">
+          <input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="a">
           """
         )
 
@@ -3229,6 +3256,97 @@ defmodule PolymorphicEmbedTest do
         end)
 
       assert contents =~ "from safe_inputs_for"
+      1
+    end)
+  end
+
+  test "form with improved param handling for different param types" do
+    reminder_module = get_module(Reminder, :polymorphic)
+
+    # Test with nil params - when contexts is empty, safe_inputs_for returns empty string
+    changeset_nil_params =
+      struct(reminder_module)
+      |> reminder_module.changeset(%{text: "Test reminder", contexts: []})
+      |> Map.put(:params, %{"contexts" => nil})
+      |> Map.put(:action, :insert)
+
+    safe_form_for(changeset_nil_params, fn _f ->
+      safe_inputs_for(changeset_nil_params, :contexts, :polymorphic, fn f ->
+        assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+        assert f.errors == []
+        assert f.params == %{}
+
+        1
+      end)
+
+      1
+    end)
+
+    # Test with list params - need to add some contexts to the data
+    changeset_list_params =
+      struct(reminder_module)
+      |> reminder_module.changeset(%{
+        text: "Test reminder",
+        contexts: [
+          %{__type__: "device", ref: "123", type: "cellphone"},
+          %{__type__: "location", address: "456 Main St"}
+        ]
+      })
+      |> Map.put(:params, %{"contexts" => [%{"ref" => "123"}, %{"address" => "456 Main St"}]})
+      |> Map.put(:action, :insert)
+
+    safe_form_for(changeset_list_params, fn _f ->
+      safe_inputs_for(changeset_list_params, :contexts, :polymorphic, fn f ->
+        assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+        assert f.errors == []
+        # First context should have params from index 0
+        if f.index == 0 do
+          assert f.params == %{"ref" => "123"}
+        end
+
+        # Second context should have params from index 1
+        if f.index == 1 do
+          assert f.params == %{"address" => "456 Main St"}
+        end
+
+        1
+      end)
+
+      1
+    end)
+
+    # Test with map params - need to add some contexts to the data
+    changeset_map_params =
+      struct(reminder_module)
+      |> reminder_module.changeset(%{
+        text: "Test reminder",
+        contexts: [
+          %{__type__: "device", ref: "789", type: "cellphone"},
+          %{__type__: "location", address: "012 Oak Ave"}
+        ]
+      })
+      |> Map.put(:params, %{
+        "contexts" => %{"0" => %{"ref" => "789"}, "1" => %{"address" => "012 Oak Ave"}}
+      })
+      |> Map.put(:action, :insert)
+
+    safe_form_for(changeset_map_params, fn _f ->
+      safe_inputs_for(changeset_map_params, :contexts, :polymorphic, fn f ->
+        assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+        assert f.errors == []
+        # First context should have params from key "0"
+        if f.index == 0 do
+          assert f.params == %{"ref" => "789"}
+        end
+
+        # Second context should have params from key "1"
+        if f.index == 1 do
+          assert f.params == %{"address" => "012 Oak Ave"}
+        end
+
+        1
+      end)
+
       1
     end)
   end
