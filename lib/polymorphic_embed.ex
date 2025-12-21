@@ -360,6 +360,16 @@ defmodule PolymorphicEmbed do
 
         to_string(type_from_parent_field) != to_string(type_from_map) ->
           raise "type specified in the parent field \"#{type_from_parent_field}\" does not match the type in the embedded map \"#{type_from_map}\""
+
+        true ->
+          # type_from_parent_field and type_from_map match
+          module = get_polymorphic_module_for_type(type_from_parent_field, types_metadata)
+
+          if is_nil(data_for_field) or data_for_field.__struct__ != module do
+            {:insert, struct(module)}
+          else
+            {:update, data_for_field}
+          end
       end
     else
       case get_polymorphic_module_from_map(params, type_field_name, types_metadata) do
