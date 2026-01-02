@@ -172,9 +172,6 @@ defmodule PolymorphicEmbed do
       {:ok, nil} when not required ->
         Ecto.Changeset.put_change(changeset, field, nil)
 
-      {:ok, map} when map == %{} and not array? ->
-        changeset
-
       {:ok, params_for_field} when array? ->
         create_sort_default = fn -> sort_create(Enum.into(cast_opts, %{}), field_opts) end
         params_for_field = apply_sort_drop(params_for_field, sort, drop, create_sort_default)
