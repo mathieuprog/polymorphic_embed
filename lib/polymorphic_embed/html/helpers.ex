@@ -73,7 +73,8 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
       |> Enum.map(fn {data, i} ->
         params = Enum.at(params, i) || %{}
 
-        changeset =
+        %Ecto.Changeset{} =
+          changeset =
           data
           |> Ecto.Changeset.change()
           |> apply_action(parent_action)
