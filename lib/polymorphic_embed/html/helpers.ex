@@ -62,7 +62,12 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
           nil ->
             type = Keyword.get(options, :polymorphic_type, get_polymorphic_type(form, field))
             module = PolymorphicEmbed.get_polymorphic_module(struct.__struct__, field, type)
-            if module, do: [struct(module)], else: []
+
+            cond do
+              module -> [struct(module)]
+              default = options[:default] -> [default]
+              true -> []
+            end
 
           data ->
             List.wrap(data)
