@@ -228,6 +228,49 @@ defmodule PolymorphicEmbedTest do
              insert_result
   end
 
+  test "infer type from parent field and cast an empty embed" do
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
+
+    reminder_attrs = %{
+      date: DateTime.utc_now(),
+      text: "This is a reminder #{generator}",
+      type: "not_provided",
+      channel4: %{}
+    }
+
+    insert_result =
+      struct(reminder_module)
+      |> reminder_module.changeset(reminder_attrs)
+      |> Repo.insert()
+
+    assert {:ok, %{id: id, channel4: %PolymorphicEmbed.Channel.NotProvided{}}} =
+             insert_result
+
+    assert %{channel4: %PolymorphicEmbed.Channel.NotProvided{}} = Repo.get!(reminder_module, id)
+  end
+
+  test "cannot cast an empty embed when no type can be inferred" do
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
+
+    reminder_attrs = %{
+      date: DateTime.utc_now(),
+      text: "This is a reminder #{generator}",
+      channel2: %{}
+    }
+
+    insert_result =
+      struct(reminder_module)
+      |> reminder_module.changeset(reminder_attrs)
+      |> Repo.insert()
+
+    assert {:error, changeset} = insert_result
+
+    assert changeset.errors == [channel2: {"is invalid", []}]
+    refute changeset.valid?
+  end
+
   test "validations before casting polymorphic embed still work" do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)
