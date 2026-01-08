@@ -172,9 +172,6 @@ defmodule PolymorphicEmbed do
       {:ok, nil} when not required ->
         Ecto.Changeset.put_change(changeset, field, nil)
 
-      {:ok, map} when map == %{} and not array? ->
-        changeset
-
       {:ok, params_for_field} when array? ->
         create_sort_default = fn -> sort_create(Enum.into(cast_opts, %{}), field_opts) end
         params_for_field = apply_sort_drop(params_for_field, sort, drop, create_sort_default)
@@ -352,10 +349,15 @@ defmodule PolymorphicEmbed do
         is_nil(type_from_map) ->
           module = get_polymorphic_module_for_type(type_from_parent_field, types_metadata)
 
-          if is_nil(data_for_field) or data_for_field.__struct__ != module do
-            {:insert, struct(module)}
-          else
-            {:update, data_for_field}
+          cond do
+            is_nil(module) ->
+              :type_not_found
+
+            is_nil(data_for_field) or data_for_field.__struct__ != module ->
+              {:insert, struct(module)}
+
+            true ->
+              {:update, data_for_field}
           end
 
         to_string(type_from_parent_field) != to_string(type_from_map) ->
