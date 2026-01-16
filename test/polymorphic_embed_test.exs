@@ -199,6 +199,35 @@ defmodule PolymorphicEmbedTest do
     assert {:error, %Ecto.Changeset{}} = insert_result
   end
 
+  test "infer type from parent field when type in embed map matches parent field type" do
+    generator = :polymorphic
+    reminder_module = get_module(Reminder, generator)
+
+    # Both parent field type and embed __type__ are "sms" - they match
+    sms_reminder_attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an SMS reminder #{generator}",
+      type: "sms",
+      channel4: %{
+        __type__: "sms",
+        number: "02/807.05.53",
+        country_code: 1,
+        provider: %{
+          __type__: "twilio",
+          api_key: "foo"
+        }
+      }
+    }
+
+    insert_result =
+      struct(reminder_module)
+      |> reminder_module.changeset(sms_reminder_attrs)
+      |> Repo.insert()
+
+    assert {:ok, %{channel4: %PolymorphicEmbed.Channel.SMS{number: "02/807.05.53"}}} =
+             insert_result
+  end
+
   test "validations before casting polymorphic embed still work" do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)
