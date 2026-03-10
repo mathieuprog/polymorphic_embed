@@ -45,7 +45,8 @@ defmodule PolymorphicEmbed.Reminder do
     polymorphic_embeds_one(:channel4,
       types: [
         sms: PolymorphicEmbed.Channel.SMS,
-        email: PolymorphicEmbed.Channel.Email
+        email: PolymorphicEmbed.Channel.Email,
+        not_provided: PolymorphicEmbed.Channel.NotProvided
       ],
       on_replace: :update,
       use_parent_field_for_type: :type
