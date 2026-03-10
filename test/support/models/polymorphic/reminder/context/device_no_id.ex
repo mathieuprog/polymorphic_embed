@@ -8,9 +8,7 @@ defmodule PolymorphicEmbed.Reminder.Context.DeviceNoId do
     field :ref, :string
     field :type, :string
 
-    embeds_one :extra, Extra do
-      field :imei, :string
-    end
+    embeds_one :extra, PolymorphicEmbed.Reminder.Context
   end
 
   def changeset(struct, params) do
