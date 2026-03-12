@@ -49,7 +49,7 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
       form.source.data.__struct__
     end
 
-    def to_form(%{action: parent_action} = source_changeset, form, field, options) do
+    def to_form(source_changeset, %{action: parent_action} = form, field, options) do
       id = to_string(form.id <> "_#{field}")
       name = to_string(form.name <> "[#{field}]")
 
@@ -57,37 +57,16 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
 
       struct = Ecto.Changeset.apply_changes(source_changeset)
 
-      list_data =
-        case Map.get(struct, field) do
-          nil ->
-            type = Keyword.get(options, :polymorphic_type, get_polymorphic_type(form, field))
-            module = PolymorphicEmbed.get_polymorphic_module(struct.__struct__, field, type)
-            if module, do: [struct(module)], else: []
-
-          data ->
-            List.wrap(data)
-        end
-
-      list_data
+      resolve_field_data(source_changeset, struct, form, field, options)
       |> Enum.with_index()
-      |> Enum.map(fn {data, i} ->
-        params = Enum.at(params, i) || %{}
-
-        %Ecto.Changeset{} =
-          changeset =
-          data
-          |> Ecto.Changeset.change()
-          |> apply_action(parent_action)
-
-        errors = get_errors(changeset)
-
-        changeset = %Ecto.Changeset{
-          changeset
-          | action: parent_action,
-            params: params,
-            errors: errors,
-            valid?: errors == []
-        }
+      |> Enum.map(&prepare_changeset(&1, params, parent_action))
+      |> Enum.map(fn prepared_data ->
+        %{
+          changeset: changeset,
+          params: params,
+          errors: errors,
+          index: i
+        } = prepared_data
 
         %schema{} = source_changeset.data
 
@@ -107,13 +86,59 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
           name: if(array?, do: name <> "[" <> index_string <> "]", else: name),
           index: if(array?, do: i),
           errors: errors,
-          data: data,
+          data: changeset.data,
           action: parent_action,
           params: params,
           hidden: [{type_field_name, to_string(type)}],
           options: options
         }
       end)
+    end
+
+    defp resolve_field_data(source_changeset, struct, form, field, options) do
+      case Map.get(source_changeset.changes, field) do
+        nil ->
+          case Map.get(struct, field) do
+            nil ->
+              type = Keyword.get(options, :polymorphic_type, get_polymorphic_type(form, field))
+              module = PolymorphicEmbed.get_polymorphic_module(struct.__struct__, field, type)
+              if module, do: [struct(module)], else: []
+
+            data ->
+              List.wrap(data)
+          end
+
+        data ->
+          List.wrap(data)
+      end
+    end
+
+    defp prepare_changeset({%Ecto.Changeset{} = changeset, i}, _params, _parent_action) do
+      params = changeset.params || %{}
+      errors = get_errors(changeset)
+
+      %{changeset: changeset, params: params, errors: errors, index: i}
+    end
+
+    defp prepare_changeset({data, i}, params, parent_action) do
+      params = Enum.at(params, i) || %{}
+
+      changeset =
+        data
+        |> Ecto.Changeset.change()
+        |> apply_action(parent_action)
+
+      errors = get_errors(changeset)
+
+      changeset = %Ecto.Changeset{
+        changeset
+        | action: parent_action,
+          params: params,
+          errors: errors,
+          valid?: errors == []
+      }
+
+      %{changeset: changeset, params: params, errors: errors, index: i}
     end
 
     # If the parent changeset had no action, we need to remove the action
