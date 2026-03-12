@@ -2857,6 +2857,30 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  test "polymorphic_embed_inputs_for ignores child errors when parent action is nil" do
+    reminder_module = get_module(Reminder, :polymorphic)
+
+    attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an Email reminder",
+      channel: %{
+        address: "a",
+        valid: true,
+        confirmed: true
+      }
+    }
+
+    changeset =
+      struct(reminder_module)
+      |> reminder_module.changeset(attrs)
+
+    safe_inputs_for(changeset, :channel, :polymorphic, fn f ->
+      assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+      assert f.errors == []
+      text_input(f, :address)
+    end)
+  end
+
   test "polymorphic_embed_inputs_for/4 for list of embeds" do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)
