@@ -199,6 +199,8 @@ def view do
 end
 ```
 
+You must also include the `phoenix_html_helpers` library (e.g. `{:phoenix_html_helpers, "~> 1.0"}`).
+
 This provides you with the `polymorphic_embed_inputs_for/3` and `polymorphic_embed_inputs_for/4` functions.
 
 Here is an example form using the imported function:
