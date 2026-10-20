@@ -3,8 +3,6 @@ defmodule PolymorphicEmbed do
 
   @type t() :: any()
 
-  require PolymorphicEmbed.OptionsValidator
-
   alias Ecto.Changeset
   alias PolymorphicEmbed.OptionsValidator
 

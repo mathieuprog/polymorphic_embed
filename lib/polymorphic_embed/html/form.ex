@@ -95,7 +95,7 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) &
       )
     end
 
-    def polymorphic_embed_inputs_for(form, field, type \\ nil, fun)
+    def polymorphic_embed_inputs_for(form, field, type, fun)
         when is_atom(field) or is_binary(field) do
       options = Keyword.take(form.options, [:multipart])
       forms = to_form(form.source, form, field, [{:polymorphic_type, type} | options])
