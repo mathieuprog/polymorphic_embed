@@ -1696,6 +1696,59 @@ defmodule PolymorphicEmbedTest do
              |> Repo.one()
   end
 
+  describe "retain_unlisted_types_on_load: :all" do
+    defp retain_all_params(retain) do
+      PolymorphicEmbed.init(
+        field: :channel,
+        schema: PolymorphicEmbed.Reminder,
+        array?: false,
+        default: nil,
+        types: [sms: PolymorphicEmbed.Channel.SMS],
+        on_replace: :update,
+        type_field_name: :my_type_field,
+        retain_unlisted_types_on_load: retain
+      )
+    end
+
+    test "loads any type the field does not know as the raw map" do
+      params = retain_all_params(:all)
+
+      for type <- ["some_deprecated_type", "a_type_from_a_newer_release"] do
+        data = %{"my_type_field" => type, "number" => "02/807.05.53"}
+        assert {:ok, ^data} = PolymorphicEmbed.load(data, &Ecto.Type.load/2, params)
+      end
+    end
+
+    test "still loads a known type as its struct" do
+      params = retain_all_params(:all)
+      data = %{"my_type_field" => "sms", "number" => "02/807.05.53", "country_code" => 1}
+
+      assert {:ok, %PolymorphicEmbed.Channel.SMS{number: "02/807.05.53"}} =
+               PolymorphicEmbed.load(data, &Ecto.Type.load/2, params)
+    end
+
+    test "a list keeps retaining only the listed types" do
+      params = retain_all_params([:some_deprecated_type])
+
+      assert {:ok, _} =
+               PolymorphicEmbed.load(
+                 %{"my_type_field" => "some_deprecated_type"},
+                 &Ecto.Type.load/2,
+                 params
+               )
+
+      assert_raise RuntimeError, fn ->
+        PolymorphicEmbed.load(%{"my_type_field" => "unlisted"}, &Ecto.Type.load/2, params)
+      end
+    end
+
+    test "rejects anything other than :all or a list of atoms" do
+      assert_raise RuntimeError, ~r/must be :all or a list of types as atoms/, fn ->
+        retain_all_params(:some)
+      end
+    end
+  end
+
   test "changing type" do
     generator = :polymorphic
     reminder_module = get_module(Reminder, generator)

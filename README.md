@@ -181,7 +181,7 @@ polymorphic_embeds_many :contexts,
   By default, a changeset error "is invalid" is added.
 * `:on_replace` – mandatory option that can only be set to `:update` for a single embed and `:delete` for a list of
   embeds (we force a value as the default value of this option for `embeds_one` and `embeds_many` is `:raise`).
-* `:retain_unlisted_types_on_load`: allow unconfigured types to be loaded without raising an error. Useful for handling deprecated structs still present in the database.
+* `:retain_unlisted_types_on_load`: allow unconfigured types to be loaded without raising an error. Useful for handling deprecated structs still present in the database. Pass `:all` to retain every type the field does not know, e.g. when several application versions share a database during a rolling deploy, or a type was removed without migrating its rows; the data then loads as the raw map. A raw map cannot be dumped back, so treat such records as read-only.
 * `:nilify_unlisted_types_on_load`: same as `:retain_unlisted_types_on_load`, but nilify the struct on load.
 
 ### Displaying form inputs and errors in Phoenix templates

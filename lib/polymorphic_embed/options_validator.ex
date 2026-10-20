@@ -61,8 +61,9 @@ defmodule PolymorphicEmbed.OptionsValidator do
     retain_unlisted_types = Keyword.fetch!(options, :retain_unlisted_types_on_load)
     nilify_unlisted_types = Keyword.fetch!(options, :nilify_unlisted_types_on_load)
 
-    unless is_list(retain_unlisted_types) and Enum.all?(retain_unlisted_types, &is_atom/1) do
-      raise "`:retain_unlisted_types_on_load` option must be a list of types as atoms."
+    unless retain_unlisted_types == :all or
+             (is_list(retain_unlisted_types) and Enum.all?(retain_unlisted_types, &is_atom/1)) do
+      raise "`:retain_unlisted_types_on_load` option must be :all or a list of types as atoms."
     end
 
     unless is_list(nilify_unlisted_types) and Enum.all?(nilify_unlisted_types, &is_atom/1) do

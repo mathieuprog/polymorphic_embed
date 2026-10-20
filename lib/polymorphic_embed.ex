@@ -491,7 +491,10 @@ defmodule PolymorphicEmbed do
     case get_polymorphic_module_from_map(data, type_field_name, types_metadata) do
       nil ->
         retain_type_list =
-          Map.fetch!(field_opts, :retain_unlisted_types_on_load) |> Enum.map(&to_string(&1))
+          case Map.fetch!(field_opts, :retain_unlisted_types_on_load) do
+            :all -> :all
+            types -> Enum.map(types, &to_string(&1))
+          end
 
         nilify_type_list =
           Map.fetch!(field_opts, :nilify_unlisted_types_on_load) |> Enum.map(&to_string(&1))
@@ -499,7 +502,7 @@ defmodule PolymorphicEmbed do
         type = Map.get(data, type_field_name |> to_string)
 
         cond do
-          type in retain_type_list ->
+          retain_type_list == :all or type in retain_type_list ->
             {:ok, data}
 
           type in nilify_type_list ->
