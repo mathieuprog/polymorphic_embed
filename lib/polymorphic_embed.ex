@@ -279,6 +279,31 @@ defmodule PolymorphicEmbed do
 
   defp key_as_int(key_val), do: key_val
 
+  defp normalize_params(params) when is_map(params) and not is_struct(params) do
+    keys = Map.keys(params)
+
+    cond do
+      Enum.all?(keys, &is_binary/1) ->
+        params
+
+      Enum.all?(keys, &is_atom/1) ->
+        Map.new(params, fn {key, value} -> {Atom.to_string(key), value} end)
+
+      true ->
+        raise_invalid_params(params)
+    end
+  end
+
+  defp normalize_params(params), do: raise_invalid_params(params)
+
+  defp raise_invalid_params(params) do
+    raise Ecto.CastError,
+      type: :map,
+      value: params,
+      message:
+        "expected polymorphic embed params to be a map with only atom keys or only string keys, got: #{inspect(params)}"
+  end
+
   defp changeset_fun(struct, params, with, types_metadata) when is_list(with) do
     type = do_get_polymorphic_type(struct, types_metadata)
 
@@ -300,6 +325,7 @@ defmodule PolymorphicEmbed do
 
   defp cast_polymorphic_embeds_one(changeset, field, changeset_fun, params, field_opts) do
     %{on_type_not_found: on_type_not_found} = field_opts
+    params = normalize_params(params)
 
     data_for_field = Map.fetch!(changeset.data, field)
 
@@ -342,7 +368,7 @@ defmodule PolymorphicEmbed do
     } = field_opts
 
     if parent_field_for_type != nil do
-      type_from_map = Attrs.get(params, type_field_name)
+      type_from_map = Map.get(params, to_string(type_field_name))
       type_from_parent_field = Ecto.Changeset.fetch_field!(changeset, parent_field_for_type)
 
       cond do
@@ -404,6 +430,8 @@ defmodule PolymorphicEmbed do
 
     embeds =
       Enum.map(list_params, fn params ->
+        params = normalize_params(params)
+
         case get_polymorphic_module_from_map(params, type_field_name, types_metadata) do
           nil when on_type_not_found == :raise ->
             raise_cannot_infer_type_from_data(params)
@@ -418,7 +446,7 @@ defmodule PolymorphicEmbed do
             data_for_field =
               Enum.find(list_data_for_field, fn
                 %{id: id} = datum when not is_nil(id) ->
-                  id == params[:id] and datum.__struct__ == module
+                  id == params["id"] and datum.__struct__ == module
 
                 _ ->
                   nil

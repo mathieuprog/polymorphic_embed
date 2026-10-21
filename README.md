@@ -104,7 +104,7 @@ add(:channel, :map)
 
 * `:required` – if the embed is a required field.
 
-* `:with` – allows you to specify a custom changeset.
+* `:with` – allows you to specify a custom changeset. Callbacks receive string-keyed parameters, including when callers supply atom-keyed parameters.
 ```elixir
 changeset
 |> cast_polymorphic_embed(:channel,
@@ -120,6 +120,12 @@ changeset
 * `:sort_param` – see [sorting-and-deleting-from-many-collections](https://hexdocs.pm/ecto/3.11.2/Ecto.Changeset.html#cast_assoc/3-sorting-and-deleting-from-many-collections).
 
 * `:default_type_on_sort_create` – in some cases, [`sort` creates a new entry](https://github.com/elixir-ecto/ecto/blob/v3.11/test/ecto/changeset/embedded_test.exs#L464); this option specifies which type to use by default for the entry.
+
+#### Parameter keys and existing children
+
+Each child parameter map may use atom keys or string keys. The caster converts its keys to strings before type selection, ID matching, and changeset callbacks. Maps with mixed key types raise `Ecto.CastError`. Nested values remain unchanged.
+
+For `polymorphic_embeds_many`, a matching non-nil `id` and type select the existing child as the changeset's data. This lets child changeset functions retain fields omitted from the submitted parameters. Nested embeds follow their configured `on_replace` rules.
 
 ### PolymorphicEmbed Ecto type
 
