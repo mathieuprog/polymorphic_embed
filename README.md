@@ -100,6 +100,8 @@ add(:channel, :map)
 
 `cast_polymorphic_embed/3` must be called to cast the polymorphic embed's parameters.
 
+After casting a polymorphic embed, its entry in `changeset.params` contains the child changeset's parameters. For `polymorphic_embeds_many`, this is a list in the final cast order, with dropped and ignored rows removed. Form helpers use these parameters to preserve submitted values and row identifiers.
+
 #### Options
 
 * `:required` – if the embed is a required field.

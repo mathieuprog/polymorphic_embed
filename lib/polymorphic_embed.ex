@@ -319,6 +319,7 @@ defmodule PolymorphicEmbed do
       {action, struct} ->
         embed_changeset = changeset_fun.(struct, params)
         embed_changeset = %{embed_changeset | action: action}
+        changeset = put_embed_params(changeset, field, embed_changeset.params || params)
 
         case embed_changeset do
           %{valid?: true} = embed_changeset ->
@@ -431,20 +432,26 @@ defmodule PolymorphicEmbed do
                 %{changeset_fun.(struct(module), params) | action: :insert}
               end
 
-            maybe_apply_changes(embed_changeset)
+            {maybe_apply_changes(embed_changeset), embed_changeset.params || params}
         end
       end)
 
     if Enum.any?(embeds, &(&1 == :error)) do
       Ecto.Changeset.add_error(changeset, field, "is invalid")
     else
-      embeds = Enum.filter(embeds, &(&1 != :ignore))
+      {embeds, params} =
+        embeds
+        |> Enum.reject(&(&1 == :ignore))
+        |> Enum.unzip()
 
       any_invalid? =
         Enum.any?(embeds, fn
           %{valid?: false} -> true
           _ -> false
         end)
+
+      # Keep each row's parameters in cast order, including children converted to structs.
+      changeset = put_embed_params(changeset, field, params)
 
       changeset = Ecto.Changeset.put_change(changeset, field, embeds)
 
@@ -463,6 +470,10 @@ defmodule PolymorphicEmbed do
   end
 
   defp maybe_apply_changes(%Changeset{valid?: false} = changeset), do: changeset
+
+  defp put_embed_params(changeset, field, params) do
+    %{changeset | params: Map.put(changeset.params || %{}, to_string(field), params)}
+  end
 
   @impl true
   def cast(_data, _params),
