@@ -79,9 +79,8 @@ defmodule PolymorphicEmbed do
     OptionsValidator.validate!(opts)
 
     if Keyword.get(opts, :on_replace) not in [:update, :delete] do
-      raise(
-        "`:on_replace` option for polymorphic embed must be set to `:update` (single embed) or `:delete` (list of embeds)"
-      )
+      raise ArgumentError,
+            "`:on_replace` option for polymorphic embed must be set to `:update` (single embed) or `:delete` (list of embeds)"
     end
 
     types_metadata =
@@ -717,11 +716,13 @@ defmodule PolymorphicEmbed do
     end
 
     if array? and on_replace != :delete do
-      raise "`:on_replace` option for field #{inspect(field)} must be set to `:delete`"
+      raise ArgumentError,
+            "`:on_replace` option for field #{inspect(field)} must be set to `:delete`"
     end
 
     if not array? and on_replace != :update do
-      raise "`:on_replace` option for field #{inspect(field)} must be set to `:update`"
+      raise ArgumentError,
+            "`:on_replace` option for field #{inspect(field)} must be set to `:update`"
     end
   end
 
