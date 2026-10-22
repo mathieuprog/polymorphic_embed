@@ -1777,7 +1777,6 @@ defmodule PolymorphicEmbedTest do
             address: "address"
           }
         ],
-        contexts2: nil,
         contexts3: [
           %{
             __type__: "device",
@@ -2210,6 +2209,28 @@ defmodule PolymorphicEmbedTest do
         assert [] = errors
         assert %{type: {"can't be blank", [validation: :required]}} = Map.new(device_errors)
       end
+    end
+  end
+
+  test "nil for a list of embeds is invalid" do
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+
+      attrs = %{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is a reminder with nil contexts",
+        contexts: nil
+      }
+
+      changeset =
+        struct(reminder_module)
+        |> reminder_module.changeset(attrs)
+
+      refute changeset.valid?
+      refute Map.has_key?(changeset.changes, :contexts)
+
+      assert changeset.errors[:contexts] ==
+               {"is invalid", [validation: :embed, type: {:array, :map}]}
     end
   end
 
