@@ -125,7 +125,7 @@ defmodule PolymorphicEmbed do
 
     raise_if_invalid_options(field, field_opts)
 
-    %{array?: array?, types_metadata: types_metadata} = field_opts
+    %{types_metadata: types_metadata} = field_opts
 
     required = Keyword.get(cast_opts, :required, false)
     with = Keyword.get(cast_opts, :with, nil)
@@ -135,6 +135,29 @@ defmodule PolymorphicEmbed do
     # used for sort_param and drop_param support for many embeds
     sort = param_value_for_cast_opt(:sort_param, cast_opts, changeset.params)
     drop = param_value_for_cast_opt(:drop_param, cast_opts, changeset.params)
+
+    changeset =
+      if required, do: update_in(changeset.required, &[field | &1]), else: changeset
+
+    changeset
+    |> do_cast_polymorphic_embed(field, cast_opts, field_opts, changeset_fun, sort, drop)
+    |> maybe_add_required_error(field, required)
+  end
+
+  def cast_polymorphic_embed(_, _, _) do
+    raise "cast_polymorphic_embed/3 only accepts a changeset as first argument"
+  end
+
+  defp do_cast_polymorphic_embed(
+         changeset,
+         field,
+         cast_opts,
+         field_opts,
+         changeset_fun,
+         sort,
+         drop
+       ) do
+    %{array?: array?} = field_opts
 
     case Map.fetch(changeset.params || %{}, to_string(field)) do
       # consider sort and drop params even if the assoc param was not given, as in Ecto
@@ -150,15 +173,7 @@ defmodule PolymorphicEmbed do
           field_opts
         )
 
-      :error when required ->
-        if data_for_field = Map.fetch!(changeset.data, field) do
-          data_for_field = autogenerate_id(data_for_field, changeset.action)
-          Ecto.Changeset.put_change(changeset, field, data_for_field)
-        else
-          Ecto.Changeset.add_error(changeset, field, "can't be blank", validation: :required)
-        end
-
-      :error when not required ->
+      :error ->
         if data_for_field = Map.fetch!(changeset.data, field) do
           data_for_field = autogenerate_id(data_for_field, changeset.action)
           Ecto.Changeset.put_change(changeset, field, data_for_field)
@@ -174,10 +189,7 @@ defmodule PolymorphicEmbed do
       when not array? and not is_map(params_for_field) and not is_nil(params_for_field) ->
         add_invalid_error(changeset, field, array?)
 
-      {:ok, nil} when required ->
-        Ecto.Changeset.add_error(changeset, field, "can't be blank", validation: :required)
-
-      {:ok, nil} when not required ->
+      {:ok, nil} ->
         Ecto.Changeset.put_change(changeset, field, nil)
 
       {:ok, map} when map == %{} and not array? ->
@@ -206,8 +218,16 @@ defmodule PolymorphicEmbed do
     end
   end
 
-  def cast_polymorphic_embed(_, _, _) do
-    raise "cast_polymorphic_embed/3 only accepts a changeset as first argument"
+  # As in Ecto, a required embed must not be nil or an empty list after the cast.
+  defp maybe_add_required_error(changeset, _field, false), do: changeset
+
+  defp maybe_add_required_error(changeset, field, true) do
+    if Keyword.has_key?(changeset.errors, field) or
+         Ecto.Changeset.get_field(changeset, field) not in [nil, []] do
+      changeset
+    else
+      Ecto.Changeset.add_error(changeset, field, "can't be blank", validation: :required)
+    end
   end
 
   defp sort_create(%{sort_param: _} = cast_opts, field_opts) do
