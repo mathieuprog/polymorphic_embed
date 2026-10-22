@@ -66,6 +66,7 @@ defmodule PolymorphicEmbed.MixProject do
       {:floki, "~> 0.36", only: :test},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
+      {:castore, "~> 1.0", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end
