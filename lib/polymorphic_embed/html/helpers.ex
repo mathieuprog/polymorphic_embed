@@ -89,11 +89,33 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
           data: changeset.data,
           action: parent_action,
           params: params,
-          hidden: [{type_field_name, to_string(type)}],
+          hidden:
+            primary_key_hidden(changeset.data, Map.get(source_changeset.data, field)) ++
+              [{type_field_name, to_string(type)}],
           options: options
         }
       end)
     end
+
+    # As in phoenix_ecto, the hidden inputs hold the primary key of a row that
+    # the parent data holds, so that the form sends the id back and the cast
+    # can match the row. A new row has no id in an Ecto form, so its form
+    # gets none, also when the cast generated one.
+    defp primary_key_hidden(%module{} = data, parent_data) do
+      pks = Enum.map(module.__schema__(:primary_key), &{&1, Map.get(data, &1)})
+
+      existing? =
+        parent_data
+        |> List.wrap()
+        |> Enum.any?(fn row ->
+          is_struct(row, module) and
+            Enum.all?(pks, fn {key, value} -> Map.get(row, key) == value end)
+        end)
+
+      if existing?, do: Enum.reject(pks, &is_nil(elem(&1, 1))), else: []
+    end
+
+    defp primary_key_hidden(_data, _parent_data), do: []
 
     defp resolve_field_data(source_changeset, struct, form, field, options) do
       case Map.get(source_changeset.changes, field) do
