@@ -2234,6 +2234,26 @@ defmodule PolymorphicEmbedTest do
     end
   end
 
+  test "matches rows of a list that holds entries from the load options" do
+    reminder = %PolymorphicEmbed.Reminder{
+      contexts: [
+        %{"__type__" => "old"},
+        nil,
+        %PolymorphicEmbed.Reminder.Context.Age{id: "a1", age: "old"}
+      ]
+    }
+
+    params = %{"contexts" => [%{"__type__" => "age", "id" => "a1", "age" => "new"}]}
+
+    changeset =
+      reminder
+      |> Ecto.Changeset.cast(params, [])
+      |> PolymorphicEmbed.cast_polymorphic_embed(:contexts)
+
+    assert [%PolymorphicEmbed.Reminder.Context.Age{id: "a1", age: "new"}] =
+             Ecto.Changeset.get_field(changeset, :contexts)
+  end
+
   test "list of embeds defaults to []" do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)

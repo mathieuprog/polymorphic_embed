@@ -430,6 +430,22 @@ defmodule PolymorphicEmbed do
     end
   end
 
+  # As in Ecto, the params match a row when each primary key, cast to its
+  # type, is equal to the primary key of the row.
+  defp same_pk?(%module{} = datum, params) do
+    pks = module.__schema__(:primary_key)
+
+    pks != [] and
+      Enum.all?(pks, fn pk ->
+        value = Map.get(datum, pk)
+
+        case Ecto.Type.cast(module.__schema__(:type, pk), Attrs.get(params, pk)) do
+          {:ok, param_value} -> not is_nil(value) and param_value == value
+          _ -> false
+        end
+      end)
+  end
+
   # The same error as Ecto gives for params that are not a map (or a list of maps).
   defp add_invalid_error(changeset, field, array?) do
     type = if array?, do: {:array, :map}, else: :map
@@ -458,14 +474,13 @@ defmodule PolymorphicEmbed do
             :ignore
 
           module ->
+            # With nilify_unlisted_types_on_load or retain_unlisted_types_on_load,
+            # the loaded list can hold nil or plain maps. They match no params.
             data_for_field =
-              Enum.find(list_data_for_field, fn
-                %{id: id} = datum when not is_nil(id) ->
-                  id == params[:id] and datum.__struct__ == module
-
-                _ ->
-                  nil
-              end)
+              Enum.find(
+                list_data_for_field,
+                &(is_struct(&1, module) and same_pk?(&1, params))
+              )
 
             embed_changeset =
               if data_for_field do
