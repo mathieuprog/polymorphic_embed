@@ -31,6 +31,37 @@ defmodule PolymorphicEmbed.HTML.HelpersTest do
     end
   end
 
+  defmodule Notice do
+    use Ecto.Schema
+    import PolymorphicEmbed
+
+    embedded_schema do
+      field(:type, :string)
+
+      polymorphic_embeds_one(:channel,
+        types: [sms: PolymorphicEmbed.Channel.SMS, email: Email],
+        on_replace: :update,
+        use_parent_field_for_type: :type
+      )
+    end
+
+    def changeset(data, params) do
+      data
+      |> Changeset.cast(params, [:type])
+      |> cast_polymorphic_embed(:channel)
+    end
+  end
+
+  defmodule Board do
+    use Ecto.Schema
+    import PolymorphicEmbed
+
+    embedded_schema do
+      polymorphic_embeds_one(:notice, types: [notice: Notice], on_replace: :update)
+      polymorphic_embeds_many(:notices, types: [notice: Notice], on_replace: :delete)
+    end
+  end
+
   test "preserves sorted row parameters inside a valid single embed" do
     first = %{"__type__" => "age", "age" => "same", "_persistent_id" => "first"}
     second = %{"__type__" => "age", "age" => "same", "_persistent_id" => "second"}
@@ -182,6 +213,22 @@ defmodule PolymorphicEmbed.HTML.HelpersTest do
     [country] = Phoenix.HTML.FormData.to_form(form.source, rebuilt, :country, [])
     assert country.errors == child.changes.country.errors
     assert country.errors != []
+  end
+
+  # The parent field gives the type, so the params of the nested embed have no type key.
+  test "infers the type of a nested embed from the cast data" do
+    row = %{"__type__" => "notice", "type" => "email", "channel" => %{"address" => "valid"}}
+
+    for {field, field_params} <- [notice: row, notices: [row], notices: %{"0" => row}] do
+      parent =
+        %Board{}
+        |> Changeset.cast(%{to_string(field) => field_params}, [])
+        |> PolymorphicEmbed.cast_polymorphic_embed(field)
+        |> Map.put(:action, :validate)
+
+      [form] = forms(parent, field)
+      assert Helpers.get_polymorphic_type(form, :channel) == :email, inspect(field_params)
+    end
   end
 
   defp forms(changeset, field) do
