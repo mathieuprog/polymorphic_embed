@@ -6,7 +6,12 @@ if Code.ensure_loaded?(Phoenix.HTML) && Code.ensure_loaded?(Phoenix.HTML.Form) d
     def get_polymorphic_type(%Phoenix.HTML.Form{} = form, field) do
       %schema{} = form.source.data
 
-      case form[field] && form[field].value do
+      # The cast data gives the type also when the params have no type key,
+      # as with use_parent_field_for_type. The input value gives the type
+      # when the field has no data yet.
+      value = Ecto.Changeset.get_field(form.source, field) || (form[field] && form[field].value)
+
+      case value do
         %Ecto.Changeset{data: value} ->
           PolymorphicEmbed.get_polymorphic_type(schema, field, value)
 
