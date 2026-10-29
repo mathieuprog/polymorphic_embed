@@ -1777,7 +1777,6 @@ defmodule PolymorphicEmbedTest do
             address: "address"
           }
         ],
-        contexts2: nil,
         contexts3: [
           %{
             __type__: "device",
@@ -2211,6 +2210,48 @@ defmodule PolymorphicEmbedTest do
         assert %{type: {"can't be blank", [validation: :required]}} = Map.new(device_errors)
       end
     end
+  end
+
+  test "nil for a list of embeds is invalid" do
+    for generator <- @generators do
+      reminder_module = get_module(Reminder, generator)
+
+      attrs = %{
+        date: ~U[2020-05-28 02:57:19Z],
+        text: "This is a reminder with nil contexts",
+        contexts: nil
+      }
+
+      changeset =
+        struct(reminder_module)
+        |> reminder_module.changeset(attrs)
+
+      refute changeset.valid?
+      refute Map.has_key?(changeset.changes, :contexts)
+
+      assert changeset.errors[:contexts] ==
+               {"is invalid", [validation: :embed, type: {:array, :map}]}
+    end
+  end
+
+  test "matches rows of a list that holds entries from the load options" do
+    reminder = %PolymorphicEmbed.Reminder{
+      contexts: [
+        %{"__type__" => "old"},
+        nil,
+        %PolymorphicEmbed.Reminder.Context.Age{id: "a1", age: "old"}
+      ]
+    }
+
+    params = %{"contexts" => [%{"__type__" => "age", "id" => "a1", "age" => "new"}]}
+
+    changeset =
+      reminder
+      |> Ecto.Changeset.cast(params, [])
+      |> PolymorphicEmbed.cast_polymorphic_embed(:contexts)
+
+    assert [%PolymorphicEmbed.Reminder.Context.Age{id: "a1", age: "new"}] =
+             Ecto.Changeset.get_field(changeset, :contexts)
   end
 
   test "list of embeds defaults to []" do
@@ -2770,25 +2811,58 @@ defmodule PolymorphicEmbedTest do
     for generator <- @generators do
       reminder_module = get_module(Reminder, generator)
 
-      attrs = %{
-        date: ~U[2020-05-28 02:57:19Z],
-        text: "This is an Email reminder",
-        channel: %{
-          address: "a",
-          valid: true,
-          confirmed: true
-        }
-      }
+      attrs =
+        if polymorphic?(generator) do
+          %{
+            date: ~U[2020-05-28 02:57:19Z],
+            text: "This is an Email reminder",
+            channel: %{
+              address: "a",
+              valid: true,
+              confirmed: true
+            }
+          }
+        else
+          %{
+            number: ~U[2020-05-28 02:57:19Z],
+            text: "This is a non polymorphic reminder",
+            channel: %{
+              number: "a"
+            }
+          }
+        end
 
       changeset =
         struct(reminder_module)
         |> reminder_module.changeset(attrs)
 
+      # Without parent action, errors should be empty in both cases
+      # (mirroring standard Ecto embed behavior)
+      safe_inputs_for(changeset, :channel, generator, fn f ->
+        assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+        assert is_struct(f.data), "f.data should be a struct, not a changeset"
+        refute match?(%Ecto.Changeset{}, f.data), "f.data should not be a changeset"
+        assert f.errors == []
+        assert f.action == nil
+
+        if polymorphic?(generator), do: text_input(f, :address), else: text_input(f, :number)
+      end)
+
+      changeset = Map.put(changeset, :action, :insert)
+
+      # With parent action, validation errors should surface in both cases
       contents =
         safe_inputs_for(changeset, :channel, generator, fn f ->
           assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
-          assert f.errors == []
-          text_input(f, :address)
+          assert is_struct(f.data), "f.data should be a struct, not a changeset"
+          refute match?(%Ecto.Changeset{}, f.data), "f.data should not be a changeset"
+
+          assert f.errors != [],
+                 "errors should be present when parent has action and data is invalid"
+
+          assert f.action == :insert
+
+          if polymorphic?(generator), do: text_input(f, :address), else: text_input(f, :number)
         end)
 
       expected_contents =
@@ -2798,7 +2872,7 @@ defmodule PolymorphicEmbedTest do
           <input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">
           """,
           else: ~s"""
-          <input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">
+          <input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="a">
           """
         )
 
@@ -2811,7 +2885,12 @@ defmodule PolymorphicEmbedTest do
           generator,
           fn f ->
             assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
-            text_input(f, :address)
+
+            if polymorphic?(generator) do
+              text_input(f, :address)
+            else
+              text_input(f, :number)
+            end
           end
         )
 
@@ -2822,12 +2901,63 @@ defmodule PolymorphicEmbedTest do
           <input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">
           """,
           else: ~s"""
-          <input id="reminder_channel_address" name="reminder[channel][address]" type="text" value="a">
+          <input id="reminder_channel_number" name="reminder[channel][number]" type="text" value="a">
           """
         )
 
       assert contents == String.replace(expected_contents, "\n", "")
     end
+  end
+
+  test "polymorphic_embed_inputs_for ignores child errors when parent action is nil" do
+    reminder_module = get_module(Reminder, :polymorphic)
+
+    attrs = %{
+      date: ~U[2020-05-28 02:57:19Z],
+      text: "This is an Email reminder",
+      channel: %{
+        address: "a",
+        valid: true,
+        confirmed: true
+      }
+    }
+
+    changeset =
+      struct(reminder_module)
+      |> reminder_module.changeset(attrs)
+
+    safe_inputs_for(changeset, :channel, :polymorphic, fn f ->
+      assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+      assert f.errors == []
+      text_input(f, :address)
+    end)
+  end
+
+  test "polymorphic_embed_inputs_for/4 applies parent action to a prebuilt child changeset" do
+    child_changeset =
+      PolymorphicEmbed.Channel.Email.changeset(
+        %PolymorphicEmbed.Channel.Email{},
+        %{address: "a", valid: true, confirmed: true}
+      )
+
+    changeset =
+      Ecto.Changeset.change(%PolymorphicEmbed.Reminder{})
+      |> Ecto.Changeset.put_change(:channel, child_changeset)
+      |> Map.put(:action, :insert)
+
+    safe_inputs_for(changeset, :channel, :polymorphic, fn f ->
+      assert f.impl == Phoenix.HTML.FormData.Ecto.Changeset
+      assert f.action == :insert
+      assert f.source.action == :insert
+
+      assert f.errors == [
+               {:address,
+                {"should be at least %{count} character(s)",
+                 [count: 3, validation: :length, kind: :min, type: :string]}}
+             ]
+
+      text_input(f, :address)
+    end)
   end
 
   test "polymorphic_embed_inputs_for/4 for list of embeds" do
@@ -2867,7 +2997,7 @@ defmodule PolymorphicEmbedTest do
         if(polymorphic?(generator),
           do: ~s"""
           <input id="reminder_contexts_0___type__" name="reminder[contexts][0][__type__]" type="hidden" value="device">
-          <input id="reminder_contexts_0_address" name="reminder[contexts][0][address]" type="text">
+          <input id="reminder_contexts_0_address" name="reminder[contexts][0][address]" type="text" value="some address">
           <input id="reminder_contexts_1___type__" name="reminder[contexts][1][__type__]" type="hidden" value="location">
           <input id="reminder_contexts_1_address" name="reminder[contexts][1][address]" type="text" value="some address">
           """,
@@ -2894,7 +3024,7 @@ defmodule PolymorphicEmbedTest do
         if(polymorphic?(generator),
           do: ~s"""
           <input id="reminder_contexts_0___type__" name="reminder[contexts][0][__type__]" type="hidden" value="device">
-          <input id="reminder_contexts_0_address" name="reminder[contexts][0][address]" type="text">
+          <input id="reminder_contexts_0_address" name="reminder[contexts][0][address]" type="text" value="some address">
           <input id="reminder_contexts_1___type__" name="reminder[contexts][1][__type__]" type="hidden" value="location">
           <input id="reminder_contexts_1_address" name="reminder[contexts][1][address]" type="text" value="some address">
           """,
@@ -2906,6 +3036,64 @@ defmodule PolymorphicEmbedTest do
 
       assert contents == String.replace(expected_contents, "\n", "")
     end
+  end
+
+  test "to_form/4 keeps sorted embeds_many params aligned with each row" do
+    reminder_module = get_module(Reminder, :polymorphic)
+
+    attrs = %{
+      "date" => ~U[2020-05-28 02:57:19Z],
+      "text" => "This is a reminder with sorted contexts",
+      "channel" => %{
+        "my_type_field" => "sms",
+        "number" => "02/807.05.53",
+        "country_code" => 1,
+        "provider" => %{
+          "__type__" => "twilio",
+          "api_key" => "foo"
+        }
+      },
+      "contexts" => %{
+        "0" => %{
+          "__type__" => "device",
+          "_persistent_id" => "device-row",
+          "ref" => "12345",
+          "type" => "cellphone"
+        },
+        "1" => %{
+          "__type__" => "age",
+          "_persistent_id" => "age-row",
+          "age" => "aquarius"
+        }
+      },
+      "contexts_sort" => ["1", "0"]
+    }
+
+    changeset =
+      struct(reminder_module)
+      |> reminder_module.changeset(attrs)
+
+    form = Phoenix.Component.to_form(changeset)
+    forms = PolymorphicEmbed.HTML.Helpers.to_form(changeset, form, :contexts, [])
+
+    assert Enum.map(forms, & &1.data.__struct__) == [
+             PolymorphicEmbed.Reminder.Context.Age,
+             PolymorphicEmbed.Reminder.Context.Device
+           ]
+
+    assert Enum.map(forms, & &1.params) == [
+             %{
+               "__type__" => "age",
+               "_persistent_id" => "age-row",
+               "age" => "aquarius"
+             },
+             %{
+               "__type__" => "device",
+               "_persistent_id" => "device-row",
+               "ref" => "12345",
+               "type" => "cellphone"
+             }
+           ]
   end
 
   test "polymorphic_embed_inputs_for/4 after invalid insert" do

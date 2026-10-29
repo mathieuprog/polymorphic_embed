@@ -24,11 +24,13 @@ defmodule PolymorphicEmbed.OptionsValidator do
     end
 
     if is_nil(options[:default]) and options[:on_replace] != :update do
-      raise "`:on_replace` must be set to `:update` for a single polymorphic embed."
+      raise ArgumentError,
+            "`:on_replace` must be set to `:update` for a single polymorphic embed."
     end
 
     if is_list(options[:default]) and options[:on_replace] != :delete do
-      raise "`:on_replace` must be set to `:delete` for a list of polymorphic embeds."
+      raise ArgumentError,
+            "`:on_replace` must be set to `:delete` for a list of polymorphic embeds."
     end
 
     unless Keyword.fetch!(options, :on_type_not_found) in @valid_on_type_not_found_options do
